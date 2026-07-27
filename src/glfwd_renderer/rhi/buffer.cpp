@@ -17,9 +17,9 @@ namespace {
         {
             if (type >= VertexAttribute::Float)
                 return GL_FLOAT;
-            else if (type >= VertexAttribute::UInt)
+            if (type >= VertexAttribute::UInt)
                 return GL_UNSIGNED_INT;
-            else if (type >= VertexAttribute::Int)
+            if (type >= VertexAttribute::Int)
                 return GL_INT;
         }
         return GL_INVALID_ENUM;
@@ -139,7 +139,7 @@ Buffer& Buffer::operator=(Buffer&& other)
     return *this;
 }
 
-void Buffer::Bind(uint32_t binding_index)
+void Buffer::Bind(uint32_t binding_index) const
 {
     if (m_Type == Type::Uniform)
         glBindBufferBase(GL_UNIFORM_BUFFER, binding_index, m_ID);
@@ -198,22 +198,22 @@ size_t VertexAttribute::GetShaderTypeByteSize() const
 {
     switch (Type)
     {
-    case VertexAttribute::Int:   return 1 * sizeof(int);
-    case VertexAttribute::IVec2: return 2 * sizeof(int);
-    case VertexAttribute::IVec3: return 3 * sizeof(int);
-    case VertexAttribute::IVec4: return 4 * sizeof(int);
-    case VertexAttribute::UInt:  return 1 * sizeof(float);
-    case VertexAttribute::UVec2: return 2 * sizeof(float);
-    case VertexAttribute::UVec3: return 3 * sizeof(float);
-    case VertexAttribute::UVec4: return 4 * sizeof(float);
-    case VertexAttribute::Float: return 1 * sizeof(float);
-    case VertexAttribute::Vec2:  return 2 * sizeof(float);
-    case VertexAttribute::Vec3:  return 3 * sizeof(float);
-    case VertexAttribute::Vec4:  return 4 * sizeof(float);
-    case VertexAttribute::Mat2:  return 2 * 2 * sizeof(float);
-    case VertexAttribute::Mat3:  return 3 * 3 * sizeof(float);
-    case VertexAttribute::Mat4:  return 4 * 4 * sizeof(float);
-    default:                     return 0;
+    case Int:   return 1 * sizeof(int);
+    case IVec2: return 2 * sizeof(int);
+    case IVec3: return 3 * sizeof(int);
+    case IVec4: return 4 * sizeof(int);
+    case UInt:  return 1 * sizeof(float);
+    case UVec2: return 2 * sizeof(float);
+    case UVec3: return 3 * sizeof(float);
+    case UVec4: return 4 * sizeof(float);
+    case Float: return 1 * sizeof(float);
+    case Vec2:  return 2 * sizeof(float);
+    case Vec3:  return 3 * sizeof(float);
+    case Vec4:  return 4 * sizeof(float);
+    case Mat2:  return 2 * 2 * sizeof(float);
+    case Mat3:  return 3 * 3 * sizeof(float);
+    case Mat4:  return 4 * 4 * sizeof(float);
+    default:    return 0;
     }
 }
 
@@ -221,28 +221,30 @@ size_t VertexAttribute::GetShaderTypeElementSize() const
 {
     switch (Type)
     {
-    case VertexAttribute::Int:   return 1;
-    case VertexAttribute::IVec2: return 2;
-    case VertexAttribute::IVec3: return 3;
-    case VertexAttribute::IVec4: return 4;
-    case VertexAttribute::UInt:  return 1;
-    case VertexAttribute::UVec2: return 2;
-    case VertexAttribute::UVec3: return 3;
-    case VertexAttribute::UVec4: return 4;
-    case VertexAttribute::Float: return 1;
-    case VertexAttribute::Vec2:  return 2;
-    case VertexAttribute::Vec3:  return 3;
-    case VertexAttribute::Vec4:  return 4;
-    case VertexAttribute::Mat2:  return 2; // For Matrices, this represent row/column size
-    case VertexAttribute::Mat3:  return 3;
-    case VertexAttribute::Mat4:  return 4;
-    default:                     return 0;
+    case Int:   return 1;
+    case IVec2: return 2;
+    case IVec3: return 3;
+    case IVec4: return 4;
+    case UInt:  return 1;
+    case UVec2: return 2;
+    case UVec3: return 3;
+    case UVec4: return 4;
+    case Float: return 1;
+    case Vec2:  return 2;
+    case Vec3:  return 3;
+    case Vec4:  return 4;
+    case Mat2:  return 2; // For all matrices types, this represents row/column size
+    case Mat3:  return 3;
+    case Mat4:  return 4;
+    default:    return 0;
     }
 }
 
-VertexArray::VertexArray(const VertexAttribute* attributes, size_t attribute_count,
-                         std::vector<Buffer>&& vertex_buffers, Buffer&& element_buffer)
-    : m_ArrayBuffers(std::move(vertex_buffers)),
+VertexArray::VertexArray(PrimitiveMode primitive_mode, const VertexAttribute* attributes,
+                         size_t attribute_count, std::vector<Buffer>&& vertex_buffers,
+                         Buffer&& element_buffer)
+    : m_PrimitiveMode(primitive_mode),
+      m_ArrayBuffers(std::move(vertex_buffers)),
       m_ElementBuffer(std::move(element_buffer))
 {
     glGenVertexArrays(1, &m_ID);
@@ -254,9 +256,10 @@ VertexArray::VertexArray(const VertexAttribute* attributes, size_t attribute_cou
         m_ElementBuffer.Bind();
 }
 
-VertexArray::VertexArray(const VertexAttribute* attributes, size_t attribute_count,
-                         Buffer&& vertex_buffer, Buffer&& element_buffer)
-    : m_ElementBuffer(std::move(element_buffer))
+VertexArray::VertexArray(PrimitiveMode primitive_mode, const VertexAttribute* attributes,
+                         size_t attribute_count, Buffer&& vertex_buffer, Buffer&& element_buffer)
+    : m_PrimitiveMode(primitive_mode),
+      m_ElementBuffer(std::move(element_buffer))
 {
     m_ArrayBuffers.push_back(std::move(vertex_buffer));
 
@@ -280,6 +283,7 @@ VertexArray::~VertexArray()
 
 VertexArray::VertexArray(VertexArray&& other)
     : m_ID(other.m_ID),
+      m_PrimitiveMode(other.m_PrimitiveMode),
       m_ArrayBuffers(std::move(other.m_ArrayBuffers)),
       m_ElementBuffer(std::move(other.m_ElementBuffer))
 {
@@ -294,6 +298,7 @@ VertexArray& VertexArray::operator=(VertexArray&& other)
             glDeleteVertexArrays(1, &m_ID);
 
         m_ID            = other.m_ID;
+        m_PrimitiveMode = other.m_PrimitiveMode;
         m_ArrayBuffers  = std::move(other.m_ArrayBuffers);
         m_ElementBuffer = std::move(other.m_ElementBuffer);
 
@@ -307,9 +312,14 @@ void VertexArray::Bind() const
     glBindVertexArray(m_ID);
 }
 
-void VertexArray::Draw(PrimitiveMode mode, uint32_t offset, uint32_t size) const
+void VertexArray::Draw(uint32_t offset, uint32_t size) const
 {
-    int32_t gl_primitive = OpenGLContext::ConvertPrimitiveModeToOpenGL(mode);
+    Draw(m_PrimitiveMode, offset, size);
+}
+
+void VertexArray::Draw(PrimitiveMode primitive_mode, uint32_t offset, uint32_t size) const
+{
+    int32_t gl_primitive_mode = OpenGLContext::ConvertPrimitiveModeToOpenGL(primitive_mode);
 
     glBindVertexArray(m_ID);
     if (m_ElementBuffer.IsValid())
@@ -320,7 +330,7 @@ void VertexArray::Draw(PrimitiveMode mode, uint32_t offset, uint32_t size) const
                      size,
                      m_ElementBuffer.GetSize());
         GLFWD_ASSERT(offset <= size, "Offset {} cannot exceed the size {}", offset, size);
-        glDrawElements(gl_primitive,
+        glDrawElements(gl_primitive_mode,
                        size,
                        GL_UNSIGNED_INT,
                        reinterpret_cast<const void*>(static_cast<uintptr_t>(offset)));
@@ -348,7 +358,7 @@ void VertexArray::Draw(PrimitiveMode mode, uint32_t offset, uint32_t size) const
 #endif
 
         GLFWD_ASSERT(offset >= size, "Offset {} cannot exceed the size {}", offset, size);
-        glDrawArrays(gl_primitive, offset, size);
+        glDrawArrays(gl_primitive_mode, offset, size);
     }
 }
 
@@ -394,8 +404,8 @@ void VertexArray::InitializeAttributes(const VertexAttribute* attributes, size_t
         const VertexAttribute& attrib = attributes[i];
 
         // The reason why you should group your buffers
-        Buffer* target_buffer = &m_ArrayBuffers[attrib.BufferIndex];
-        if (target_buffer != prev_buffer)
+        if (Buffer* target_buffer = &m_ArrayBuffers[attrib.BufferIndex];
+            target_buffer != prev_buffer)
         {
             target_buffer->Bind();
             prev_buffer = target_buffer;

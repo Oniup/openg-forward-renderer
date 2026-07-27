@@ -1,7 +1,6 @@
 #pragma once
 
-#include <fmt/core.h>
-#include <fmt/std.h> // IWYU pragma: export
+#include <fmt/std.h>
 
 #include <cstdio>
 #include <string_view>
@@ -22,7 +21,7 @@ static void Error_SetFilterLower(ErrorSeverity severity);
 
 namespace intern {
 
-    /// Returns true if severity is a smalller value than the set lowest filter. Update filter
+    /// Returns true if severity is a smaller value than the set lowest filter. Update filter
     /// threshold by calling Error_SetFilterLower()
     bool Error_ShouldFilter(ErrorSeverity severity);
 
@@ -63,8 +62,9 @@ namespace intern {
 
         Error_PrintHeader(severity, file, function, line);
 
-        fmt::println(stderr, format, std::forward<Args>(args)...);
-        std::fflush(stderr);
+        FILE* output = severity <= ErrorSeverity::Low ? stdout : stderr;
+        fmt::println(output, format, std::forward<Args>(args)...);
+        std::fflush(output);
     }
 
 } // namespace intern
@@ -79,7 +79,7 @@ namespace intern {
 #        define glfwd_DEBUG_BREAK __builtin_trap()
 #    endif
 #else
-// Dont know if this works only  compiling on windows using MSVC and LLVM's Clang
+// Don't know if this works only  compiling on Windows using MSVC and LLVM's Clang
 #    define glfwd_DEBUG_BREAK std::DEBUG_BREAK(-1)
 #endif
 

@@ -29,7 +29,6 @@ uniform Material u_Material;
 
 void main()
 {
-    vec4 diffuse_sample = texture(u_Material.Diffuse.Texture, fs_in.TexCoord);
-
-    FragColor = vec4(diffuse_sample.rgb, diffuse_sample.a);
+    vec4 diffuse_sampler = texture(u_Material.Diffuse.Texture, fs_in.TexCoord);
+    FragColor            = vec4(diffuse_sampler.rgb, diffuse_sampler.a);
 }

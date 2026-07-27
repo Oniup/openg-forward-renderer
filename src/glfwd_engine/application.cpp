@@ -4,10 +4,6 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_events.h>
 #include <fmt/base.h>
-#include <glad/gl.h>
-#include <glm/ext/vector_float2.hpp>
-#include <glm/ext/vector_float3.hpp>
-#include <glm/gtc/type_ptr.hpp>
 
 #include <string_view>
 
@@ -18,12 +14,12 @@
 
 namespace glfwd {
 
-// clang-format off
-constexpr std::array<unsigned, 6> PlaneIndices = {
-    0, 1, 2, // First triangle
-    0, 2, 3, // Second triangle
-};
-// clang-format on
+std::string_view Application::GetBasePath()
+{
+    const char* base_path = SDL_GetBasePath();
+    GLFWD_ASSERT(base_path, "Base path is set to nullptr: {}", SDL_GetError());
+    return base_path;
+}
 
 Application::~Application()
 {
@@ -69,23 +65,12 @@ void Application::Run()
 
         timestep.CalculateDeltaTime();
 
-        // TODO: Move to Forward renderer
-        glClearColor(0.2f, 0.5f, 0.7f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
-
         OnUpdate(timestep);
         OnLateUpdate(timestep);
         SubmitToRenderQueue(m_Renderer->GetRenderQueue());
 
         m_Renderer->SwapBuffers();
     }
-}
-
-std::string_view Application::GetBasePath()
-{
-    const char* base_path = SDL_GetBasePath();
-    GLFWD_ASSERT(base_path, "Base path is set to nullptr: {}", SDL_GetError());
-    return std::string_view(base_path);
 }
 
 } // namespace glfwd

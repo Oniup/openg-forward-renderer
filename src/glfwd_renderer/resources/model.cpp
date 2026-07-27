@@ -1,5 +1,6 @@
 #include "glfwd_renderer/resources/model.h"
 
+#include <glad/gl.h>
 #include <glm/geometric.hpp>
 
 #include <array>
@@ -9,7 +10,7 @@ namespace glfwd {
 
 std::array<VertexAttribute, 4> Vertex::GetVertexAttribute()
 {
-    return std::array<VertexAttribute, 4>{
+    return std::array{
         VertexAttribute(0, VertexAttribute::Vec3), // Position
         VertexAttribute(0, VertexAttribute::Vec3), // Normal
         VertexAttribute(0, VertexAttribute::Vec3), // Color
@@ -17,30 +18,7 @@ std::array<VertexAttribute, 4> Vertex::GetVertexAttribute()
     };
 }
 
-Mesh Mesh::GenerateCube(const PhongMaterial& material, glm::vec3 vertex_color)
-{
-    glm::vec3 color1 = vertex_color == glm::vec3(0.0f) ? glm::vec3(1.0f, 0.0f, 0.0f) : vertex_color;
-    glm::vec3 color2 = vertex_color == glm::vec3(0.0f) ? glm::vec3(0.0f, 1.0f, 0.0f) : vertex_color;
-    glm::vec3 color3 = vertex_color == glm::vec3(0.0f) ? glm::vec3(0.0f, 0.0f, 1.0f) : vertex_color;
-    glm::vec3 color4 = vertex_color == glm::vec3(0.0f) ? glm::vec3(1.0f, 1.0f, 0.0f) : vertex_color;
-
-    std::vector<Vertex> vertices = {
-        Vertex{{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, -1.0f}, color1, {1.0f, 1.0f}},   // top right
-        Vertex{{0.5f, -0.5f, 0.0f}, {0.0f, 0.0f, -1.0f}, color2, {1.0f, 0.0f}},  // bottom right
-        Vertex{{-0.5f, -0.5f, 0.0f}, {0.0f, 0.0f, -1.0f}, color3, {0.0f, 0.0f}}, // bottom left
-        Vertex{{-0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, -1.0f}, color4, {0.0f, 1.0f}},  // top left
-    };
-    std::vector<uint32_t> indices = {
-        // clang-format off
-        0, 1, 2, // First triangle
-        0, 2, 3, // Second triangle
-        // clang-format on
-    };
-
-    return Mesh(vertices, indices);
-}
-
-Mesh Mesh::GeneratePlane(const PhongMaterial& material, glm::vec3 vertex_color)
+Mesh Mesh::GenerateCube(const BlinnPhongMaterial& material, glm::vec3 vertex_color)
 {
     glm::vec3 color1 = vertex_color == glm::vec3(0.0f) ? glm::vec3(1.0f, 0.0f, 0.0f) : vertex_color;
     glm::vec3 color2 = vertex_color == glm::vec3(0.0f) ? glm::vec3(0.0f, 1.0f, 0.0f) : vertex_color;
@@ -110,8 +88,31 @@ Mesh Mesh::GeneratePlane(const PhongMaterial& material, glm::vec3 vertex_color)
     return Mesh(vertices, indices, material);
 }
 
-Mesh Mesh::GenerateSphere(size_t revolutions_x, size_t revolutions_y, const PhongMaterial& material,
-                          glm::vec3 vertex_color)
+Mesh Mesh::GeneratePlane(const BlinnPhongMaterial& material, glm::vec3 vertex_color)
+{
+    glm::vec3 color1 = vertex_color == glm::vec3(0.0f) ? glm::vec3(1.0f, 0.0f, 0.0f) : vertex_color;
+    glm::vec3 color2 = vertex_color == glm::vec3(0.0f) ? glm::vec3(0.0f, 1.0f, 0.0f) : vertex_color;
+    glm::vec3 color3 = vertex_color == glm::vec3(0.0f) ? glm::vec3(0.0f, 0.0f, 1.0f) : vertex_color;
+    glm::vec3 color4 = vertex_color == glm::vec3(0.0f) ? glm::vec3(1.0f, 1.0f, 0.0f) : vertex_color;
+
+    std::vector vertices = {
+        Vertex{{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, -1.0f}, color1, {1.0f, 1.0f}},   // top right
+        Vertex{{0.5f, -0.5f, 0.0f}, {0.0f, 0.0f, -1.0f}, color2, {1.0f, 0.0f}},  // bottom right
+        Vertex{{-0.5f, -0.5f, 0.0f}, {0.0f, 0.0f, -1.0f}, color3, {0.0f, 0.0f}}, // bottom left
+        Vertex{{-0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, -1.0f}, color4, {0.0f, 1.0f}},  // top left
+    };
+    std::vector<uint32_t> indices = {
+        // clang-format off
+        0, 1, 2, // First triangle
+        0, 2, 3, // Second triangle
+        // clang-format on
+    };
+
+    return Mesh(vertices, indices, material);
+}
+
+Mesh Mesh::GenerateSphere(size_t revolutions_x, size_t revolutions_y,
+                          const BlinnPhongMaterial& material, glm::vec3 vertex_color)
 {
     std::vector<Vertex>   vertices;
     std::vector<uint32_t> indices;
@@ -168,17 +169,18 @@ Mesh Mesh::GenerateSphere(size_t revolutions_x, size_t revolutions_y, const Phon
     return Mesh(vertices, indices, material);
 }
 
-Mesh::Mesh(const std::vector<Vertex>& vertices, const PhongMaterial& material, bool dynamic_draw)
+Mesh::Mesh(const std::vector<Vertex>& vertices, const BlinnPhongMaterial& material,
+           bool dynamic_draw, PrimitiveMode primitive_mode)
     : m_Material(material)
 {
     Buffer array_buffer(Buffer::Array, dynamic_draw);
     array_buffer.PushData(vertices.data(), sizeof(Vertex), vertices.size());
 
-    m_Data = VertexArray(Vertex::GetVertexAttribute(), std::move(array_buffer));
+    m_Data = VertexArray(primitive_mode, Vertex::GetVertexAttribute(), std::move(array_buffer));
 }
 
 Mesh::Mesh(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices,
-           const PhongMaterial& material, bool dynamic_draw)
+           const BlinnPhongMaterial& material, bool dynamic_draw, PrimitiveMode primitive_mode)
     : m_Material(material)
 {
     Buffer array_buffer(Buffer::Array, dynamic_draw);
@@ -187,10 +189,10 @@ Mesh::Mesh(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& ind
     array_buffer.PushData(vertices.data(), sizeof(Vertex), vertices.size());
     element_buffer.PushData(indices.data(), sizeof(uint32_t), indices.size());
 
-    size_t buffer_index = 0;
-
-    m_Data = VertexArray(
-        Vertex::GetVertexAttribute(), std::move(array_buffer), std::move(element_buffer));
+    m_Data = VertexArray(primitive_mode,
+                         Vertex::GetVertexAttribute(),
+                         std::move(array_buffer),
+                         std::move(element_buffer));
 }
 
 Mesh::Mesh(Mesh&& other)
@@ -214,6 +216,11 @@ bool Mesh::IsValid() const
     return m_Data.IsValid();
 }
 
+void Mesh::Draw() const
+{
+    m_Data.Draw();
+}
+
 void Mesh::Draw(PrimitiveMode primitive_mode) const
 {
     m_Data.Draw(primitive_mode);
@@ -225,6 +232,7 @@ Model::Model(std::string_view path)
 
 Model::Model(Mesh&& mesh)
 {
+    m_Meshes.push_back(std::move(mesh));
 }
 
 } // namespace glfwd

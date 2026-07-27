@@ -1,5 +1,4 @@
 #include "glfwd_core/utility/color.h"
-
 #include "glfwd_core/utility/error.h"
 
 namespace glfwd {

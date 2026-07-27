@@ -18,32 +18,32 @@ namespace intern {
 
 } // namespace intern
 
-PhongMaterial::ColorAttribute::ColorAttribute()
+BlinnPhongMaterial::ColorAttribute::ColorAttribute()
     : Color(glm::vec3(1.0f)),
       TextureHandle(s_DefaultWhiteTexture)
 {
 }
 
-PhongMaterial::ColorAttribute::ColorAttribute(glm::vec3 color)
+BlinnPhongMaterial::ColorAttribute::ColorAttribute(glm::vec3 color)
     : Color(color),
       TextureHandle(s_DefaultWhiteTexture)
 {
 }
 
-PhongMaterial::ColorAttribute::ColorAttribute(const ResourceHandle<Texture>& texture)
+BlinnPhongMaterial::ColorAttribute::ColorAttribute(const ResourceHandle<Texture>& texture)
     : Color(1.0),
       TextureHandle(texture)
 {
 }
 
-PhongMaterial::ColorAttribute::ColorAttribute(glm::vec3                      color,
-                                              const ResourceHandle<Texture>& texture)
+BlinnPhongMaterial::ColorAttribute::ColorAttribute(glm::vec3                      color,
+                                                   const ResourceHandle<Texture>& texture)
     : Color(color),
       TextureHandle(texture)
 {
 }
 
-void PhongMaterial::SetupShaderMaterial(const Shader* shader, bool bind_shader)
+void BlinnPhongMaterial::SetupShaderMaterial(const Shader* shader, bool bind_shader)
 {
     if (bind_shader)
         shader->Bind();
@@ -53,7 +53,13 @@ void PhongMaterial::SetupShaderMaterial(const Shader* shader, bool bind_shader)
     shader->PushConstant("u_Material.Emission.Texture", 2);
 }
 
-void PhongMaterial::PushConstantsToShader(const Shader* shader, ResourceManager* resources)
+bool BlinnPhongMaterial::IsValid() const
+{
+    return true;
+}
+
+void BlinnPhongMaterial::PushConstantsToShader(const Shader*    shader,
+                                               ResourceManager* resources) const
 {
     // Flat Colors
     shader->PushConstant("u_Material.Diffuse.Color", Diffuse.Color);

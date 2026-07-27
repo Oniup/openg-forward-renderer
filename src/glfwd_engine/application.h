@@ -18,6 +18,12 @@ public:
     Application() = default;
     virtual ~Application();
 
+    Application(Application&& other) = delete;
+    Application(const Application& other) = delete;
+    Application& operator=(Application&& other) = delete;
+    Application& operator=(const Application& other) = delete;
+
+
     void Initialize(const ApplicationCreateInfo& create_info);
     void Run();
 

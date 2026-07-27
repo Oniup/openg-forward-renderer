@@ -6,7 +6,9 @@
 
 #include "glfwd_core/utility/error.h"
 #include "glfwd_core/window.h"
-#include "glfwd_renderer/draw_modes.h"
+#include "glfwd_renderer/create_info.h"
+#include "glfwd_renderer/draw_mode.h"
+#include "glfwd_renderer/rhi/texture.h"
 
 namespace glfwd {
 
@@ -56,17 +58,6 @@ void GLAPIENTRY glDebugOutputCallback(GLenum source, GLenum type, unsigned int i
     }
 }
 
-int32_t OpenGLContext::ConvertPolygonModeToOpenGL(PolygonMode mode)
-{
-    switch (mode)
-    {
-    case PolygonMode::FillFrontAndBack: return GL_FRONT_AND_BACK;
-    case PolygonMode::FillFront:        return GL_FRONT;
-    case PolygonMode::FillBack:         return GL_BACK;
-    case PolygonMode::Lines:            return GL_LINE;
-    }
-}
-
 int32_t OpenGLContext::ConvertPrimitiveModeToOpenGL(PrimitiveMode mode)
 {
     switch (mode)
@@ -79,6 +70,26 @@ int32_t OpenGLContext::ConvertPrimitiveModeToOpenGL(PrimitiveMode mode)
     case PrimitiveMode::TriangleStrip: return GL_TRIANGLE_STRIP;
     case PrimitiveMode::TriangleFan:   return GL_TRIANGLE_FAN;
     case PrimitiveMode::Patches:       return GL_PATCHES;
+    }
+}
+
+int32_t OpenGLContext::ConvertPolygonModeToOpenGL(PolygonMode mode)
+{
+    switch (mode)
+    {
+    case PolygonMode::Lines:  return GL_LINE;
+    case PolygonMode::Points: return GL_POINT;
+    case PolygonMode::Fill:   return GL_FILL;
+    }
+}
+
+int32_t OpenGLContext::ConvertFaceModeToOpenGL(FaceMode mode)
+{
+    switch (mode)
+    {
+    case FaceMode::Front:        return GL_FRONT;
+    case FaceMode::Back:         return GL_BACK;
+    case FaceMode::FrontAndBack: return GL_FRONT_AND_BACK;
     }
 }
 
@@ -155,7 +166,8 @@ int32_t OpenGLContext::GetMaxAnisotropy()
     return s_Instance->m_MaxAnisotropy;
 }
 
-OpenGLContext::OpenGLContext(bool enable_hardware_debug_callback)
+OpenGLContext::OpenGLContext(const RendererCreateInfo& info)
+    : m_SwapIntervalMode(info.SwapIntervalMode)
 {
     GLFWD_ASSERT(!s_Instance,
                  "RHI/OpenGL Context has already been initialized, cannot have 2 instances");
@@ -166,19 +178,26 @@ OpenGLContext::OpenGLContext(bool enable_hardware_debug_callback)
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 6);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+    SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, true); // Force hardware acceleration
 
-    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);       // Required to prevent screen tearing
-    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 0);         // Screen framebuffer doesn't require
-    SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 0);       // Screen framebuffer doesn't require
-    SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1); // Disable software rendering
+    if (info.EnableDepthForScreenFramebuffer)
+    {
+        SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+        SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
+    }
+    else
+    {
+        SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 0);
+        SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 0);
+    }
 
-    if (enable_hardware_debug_callback)
+    if (info.EnableHardwareDebugCallback)
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
 }
 
 OpenGLContext::~OpenGLContext()
 {
-    Terminate();
+    Shutdown();
 }
 
 void OpenGLContext::InitializeBackend(Window* window)
@@ -191,7 +210,7 @@ void OpenGLContext::InitializeBackend(Window* window)
     int glad_version = gladLoadGL((GLADloadfunc)SDL_GL_GetProcAddress);
     if (glad_version == 0)
     {
-        Terminate();
+        Shutdown();
         GLFWD_FATAL("Failed to initialize OpenGL pointer functions through glad loader");
     }
     GLFWD_INFO("Initialized OpenGL {}.{}",
@@ -211,9 +230,11 @@ void OpenGLContext::InitializeBackend(Window* window)
 
     glGetIntegerv(GL_MAX_SAMPLES, &m_MaxMSAASamples);
     glGetIntegerv(GL_MAX_TEXTURE_MAX_ANISOTROPY, &m_MaxAnisotropy);
+
+    SDL_GL_SetSwapInterval(static_cast<int32_t>(m_SwapIntervalMode));
 }
 
-void OpenGLContext::Terminate()
+void OpenGLContext::Shutdown()
 {
     if (m_InternalContext)
     {
@@ -221,9 +242,14 @@ void OpenGLContext::Terminate()
         SDL_Quit();
 
         m_InternalContext = nullptr;
-
-        s_Instance = nullptr;
+        s_Instance        = nullptr;
     }
+}
+
+void OpenGLContext::SetSwapIntervalMode(SwapInterval mode)
+{
+    m_SwapIntervalMode = mode;
+    SDL_GL_SetSwapInterval(static_cast<int32_t>(mode));
 }
 
 } // namespace glfwd

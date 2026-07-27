@@ -1,51 +1,50 @@
 # Renderer and OpenGL Abstraction Layer
 # ==============================================================================
-add_library(glfwd_renderer STATIC)
-target_include_directories(glfwd_renderer
-PUBLIC
-    ${CMAKE_SOURCE_DIR}/src
+set(SRC
+        ./resources/camera.h
+        ./resources/camera.cpp
+        ./resources/material.h
+        ./resources/material.cpp
+        ./resources/model.h
+        ./resources/model.cpp
+
+        ./rhi/buffer.h
+        ./rhi/buffer.cpp
+        ./rhi/context.h
+        ./rhi/context.cpp
+        ./rhi/shader.h
+        ./rhi/shader.cpp
+        ./rhi/texture.h
+        ./rhi/texture.cpp
+
+        ./create_info.h
+        ./render_queue.h
+        ./draw_mode.h
+        ./forward_renderer.h
+        ./forward_renderer.cpp
+)
+source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${SRC})
+
+add_library(glfwd_renderer STATIC ${SRC})
+
+target_include_directories(glfwd_renderer PUBLIC
+        ${CMAKE_SOURCE_DIR}/src
 )
 
-target_sources(glfwd_renderer
-PUBLIC
-    ./resources/camera.h
-    ./resources/material.h
-    ./resources/model.h
-    ./rhi/buffer.h
-    ./rhi/context.h
-    ./rhi/shader.h
-    ./rhi/texture.h
-    ./create_info.h
-    ./render_queue.h
-    ./draw_modes.h
-    ./forward_renderer.h
-PRIVATE
-    ./resources/camera.cpp
-    ./resources/material.cpp
-    ./resources/model.cpp
-    ./rhi/buffer.cpp
-    ./rhi/context.cpp
-    ./rhi/shader.cpp
-    ./rhi/texture.cpp
-    ./forward_renderer.cpp
-)
-
-target_compile_definitions(glfwd_renderer
-PRIVATE
-    glfwd_SHADER_HOT_RELOAD=$<BOOL:${glfwd_SHADER_HOT_RELOAD}>
+target_compile_definitions(glfwd_renderer PUBLIC
+        GLFWD_SHADER_HOT_RELOAD=$<BOOL:${GLFWD_SHADER_HOT_RELOAD}>
 )
 
 # Dependencies
 # ==============================================================================
-target_link_libraries(glfwd_renderer
-PUBLIC
-    glfwd::core
-    glm::glm
-
-PRIVATE
-    SDL3::SDL3
-    SDL3_image::SDL3_image
-    glad
+target_link_libraries(glfwd_renderer PUBLIC
+        glfwd::core
+        glm::glm
+)
+target_link_libraries(glfwd_renderer PRIVATE
+        SDL3::SDL3
+        SDL3_image::SDL3_image
+        glad
 )
 
 # Alias for external linking

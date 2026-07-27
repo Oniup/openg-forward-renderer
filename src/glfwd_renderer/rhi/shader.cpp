@@ -1,8 +1,6 @@
 #include "glfwd_renderer/rhi/shader.h"
 
 #include <SDL3/SDL_iostream.h>
-#include <fmt/core.h>
-#include <fmt/ranges.h>
 #include <glad/gl.h>
 
 #include <array>
@@ -11,7 +9,10 @@
 #include "glfwd_core/utility/error.h"
 #include "glfwd_renderer/rhi/texture.h"
 
-#define ERROR_BUFFER_LENGTH 1024
+enum
+{
+    ERROR_BUFFER_LENGTH = 1024
+};
 
 namespace glfwd {
 
@@ -35,94 +36,17 @@ namespace {
 
 Shader::Shader(std::string_view vertex, std::string_view fragment, std::string_view geometry)
 {
-    GLFWD_ASSERT_STRING_VIEW_NULL_TERMINATED(vertex);
-    GLFWD_ASSERT_STRING_VIEW_NULL_TERMINATED(fragment);
-
-    std::array<std::string_view, SHADER_TYPE_COUNT> paths   = {vertex, fragment, geometry};
-    std::array<uint32_t, SHADER_TYPE_COUNT>         shaders = {};
-
-    size_t count = 2;
-    if (!geometry.empty())
+    uint32_t program = LoadShaderFromPath(vertex, fragment, geometry);
+    if (program != 0)
     {
-        count = 3;
-        GLFWD_ASSERT_STRING_VIEW_NULL_TERMINATED(geometry);
+        m_ID = program;
+
+#ifdef GLFWD_SHADER_HOT_RELOAD
+        m_VertexPath   = vertex;
+        m_FragmentPath = fragment;
+        m_GeometryPath = geometry;
+#endif
     }
-
-    for (size_t i = 0; i < count; i++)
-    {
-        std::string_view path = paths[i];
-
-        // Load source code into memory
-        size_t source_size;
-        char*  source = static_cast<char*>(SDL_LoadFile(path.data(), &source_size));
-        if (!source)
-        {
-            for (size_t j = 0; j < i; j++)
-                glDeleteShader(shaders[j]);
-            GLFWD_ERROR("Failed to read {} shader at path {}", SHADER_TYPE_NAMES[i], path);
-            return;
-        }
-
-        // Compile shader
-        uint32_t shader = glCreateShader(SHADER_TYPES[i]);
-        glShaderSource(shader, 1, &source, nullptr);
-        glCompileShader(shader);
-
-        // Don't need source code anymore
-        SDL_free(source);
-
-        // Check for compile errors
-        int32_t success;
-        glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
-        if (!success)
-        {
-            char buffer[ERROR_BUFFER_LENGTH];
-            glGetShaderInfoLog(shader, ERROR_BUFFER_LENGTH, nullptr, buffer);
-
-            glDeleteShader(shader);
-            for (size_t j = 0; j < i; j++)
-                glDeleteShader(shaders[j]);
-
-            GLFWD_ERROR(
-                "Failed to compile {} shader at path {}:\n{}", SHADER_TYPE_NAMES[i], path, buffer);
-            return;
-        }
-
-        // Successfully compiled shader
-        shaders[i] = shader;
-    }
-
-    // Create program
-    uint32_t program = glCreateProgram();
-    for (size_t i = 0; i < count; i++)
-        glAttachShader(program, shaders[i]);
-    glLinkProgram(program);
-
-    // Delete shaders
-    for (size_t i = 0; i < count; i++)
-        glDeleteShader(shaders[i]);
-
-    // Check for linking errors
-    int32_t success;
-    glGetProgramiv(program, GL_LINK_STATUS, &success);
-    if (!success)
-    {
-        glDeleteProgram(program);
-
-        char error_message[ERROR_BUFFER_LENGTH];
-        glGetProgramInfoLog(program, ERROR_BUFFER_LENGTH, nullptr, error_message);
-
-        std::string shader_info;
-        for (size_t i = 0; i < count; i++)
-        {
-            shader_info += fmt::format("\t- {} -> '{}'\n", SHADER_TYPE_NAMES[i], paths[i]);
-        }
-        GLFWD_ERROR("Failed to link shaders\n{}{}", shader_info, error_message);
-        return;
-    }
-
-    // Everything successful
-    m_ID = program;
 }
 
 Shader::~Shader()
@@ -136,6 +60,12 @@ Shader::~Shader()
 
 Shader::Shader(Shader&& other)
     : m_ID(other.m_ID)
+#ifdef GLFWD_SHADER_HOT_RELOAD
+      ,
+      m_VertexPath(std::move(other.m_VertexPath)),
+      m_FragmentPath(std::move(other.m_FragmentPath)),
+      m_GeometryPath(std::move(other.m_GeometryPath))
+#endif
 {
     other.m_ID = 0;
 }
@@ -149,6 +79,12 @@ Shader& Shader::operator=(Shader&& other)
 
         m_ID       = other.m_ID;
         other.m_ID = 0;
+
+#ifdef GLFWD_SHADER_HOT_RELOAD
+        m_VertexPath   = std::move(other.m_VertexPath);
+        m_FragmentPath = std::move(other.m_FragmentPath);
+        m_GeometryPath = std::move(other.m_GeometryPath);
+#endif
     }
     return *this;
 }
@@ -161,6 +97,40 @@ bool Shader::IsValid() const
 void Shader::Bind() const
 {
     glUseProgram(m_ID);
+}
+
+bool Shader::ReloadShader(std::string_view new_vertex, std::string_view new_fragment,
+                          std::string_view new_geometry)
+{
+#ifdef GLFWD_SHADER_HOT_RELOAD
+    new_vertex   = new_vertex.empty() ? m_VertexPath : new_vertex;
+    new_fragment = new_fragment.empty() ? m_FragmentPath : new_fragment;
+    new_geometry = new_geometry.empty() ? m_GeometryPath : new_geometry;
+#endif
+
+    if (new_vertex.empty() || new_fragment.empty())
+    {
+        GLFWD_ERROR("Must provide a new vertex and fragment shader when reloading shader");
+        return false;
+    }
+
+    uint32_t program = LoadShaderFromPath(new_vertex, new_fragment, new_geometry);
+    if (program != 0)
+    {
+        m_ID = program;
+        GLFWD_INFO("Reloaded shaders shader:\n\tVertex: {}\n\tFragment: {}\n\tGeometry: {}",
+                   new_vertex,
+                   new_fragment,
+                   new_geometry);
+
+#ifdef GLFWD_SHADER_HOT_RELOAD
+        m_VertexPath   = new_vertex;
+        m_FragmentPath = new_fragment;
+        m_GeometryPath = new_geometry;
+#endif
+        return true;
+    }
+    return false;
 }
 
 void Shader::PushConstant(std::string_view location, int32_t val) const
@@ -207,6 +177,98 @@ void Shader::PushConstant(const Texture* texture, uint32_t active_id) const
 {
     glActiveTexture(GL_TEXTURE0 + active_id);
     texture->Bind();
+}
+
+uint32_t Shader::LoadShaderFromPath(std::string_view vertex, std::string_view fragment,
+                                    std::string_view geometry)
+{
+    GLFWD_ASSERT_STRING_VIEW_NULL_TERMINATED(vertex);
+    GLFWD_ASSERT_STRING_VIEW_NULL_TERMINATED(fragment);
+
+    std::array                              paths   = {vertex, fragment, geometry};
+    std::array<uint32_t, SHADER_TYPE_COUNT> shaders = {};
+
+    size_t count = 2;
+    if (!geometry.empty())
+    {
+        count = 3;
+        GLFWD_ASSERT_STRING_VIEW_NULL_TERMINATED(geometry);
+    }
+
+    for (size_t i = 0; i < count; i++)
+    {
+        std::string_view path = paths[i];
+
+        // Load source code into memory
+        size_t source_size;
+        auto   source = static_cast<char*>(SDL_LoadFile(path.data(), &source_size));
+        if (!source)
+        {
+            for (size_t j = 0; j < i; j++)
+                glDeleteShader(shaders[j]);
+            GLFWD_ERROR("Failed to read {} shader at path {}", SHADER_TYPE_NAMES[i], path);
+            return 0;
+        }
+
+        // Compile shader
+        uint32_t shader = glCreateShader(SHADER_TYPES[i]);
+        glShaderSource(shader, 1, &source, nullptr);
+        glCompileShader(shader);
+
+        // Don't need source code anymore
+        SDL_free(source);
+
+        // Check for compile errors
+        int32_t success;
+        glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
+        if (!success)
+        {
+            char buffer[ERROR_BUFFER_LENGTH];
+            glGetShaderInfoLog(shader, ERROR_BUFFER_LENGTH, nullptr, buffer);
+
+            glDeleteShader(shader);
+            for (size_t j = 0; j < i; j++)
+                glDeleteShader(shaders[j]);
+
+            GLFWD_ERROR(
+                "Failed to compile {} shader at path {}:\n{}", SHADER_TYPE_NAMES[i], path, buffer);
+            return 0;
+        }
+
+        // Successfully compiled shader
+        shaders[i] = shader;
+    }
+
+    // Create program
+    uint32_t program = glCreateProgram();
+    for (size_t i = 0; i < count; i++)
+        glAttachShader(program, shaders[i]);
+    glLinkProgram(program);
+
+    // Delete shaders
+    for (size_t i = 0; i < count; i++)
+        glDeleteShader(shaders[i]);
+
+    // Check for linking errors
+    int32_t success;
+    glGetProgramiv(program, GL_LINK_STATUS, &success);
+    if (!success)
+    {
+        glDeleteProgram(program);
+
+        char error_message[ERROR_BUFFER_LENGTH];
+        glGetProgramInfoLog(program, ERROR_BUFFER_LENGTH, nullptr, error_message);
+
+        std::string shader_info;
+        for (size_t i = 0; i < count; i++)
+        {
+            shader_info += fmt::format("\t- {} -> '{}'\n", SHADER_TYPE_NAMES[i], paths[i]);
+        }
+        GLFWD_ERROR("Failed to link shaders\n{}{}", shader_info, error_message);
+        return 0;
+    }
+
+    return program;
 }
 
 uint32_t Shader::GetUniformLocation(std::string_view location) const

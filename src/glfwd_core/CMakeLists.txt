@@ -1,28 +1,27 @@
 # Core
 # ==============================================================================
-add_library(glfwd_core STATIC)
-target_include_directories(glfwd_core
-PUBLIC
-    ${CMAKE_SOURCE_DIR}/src
-)
-
-target_sources(glfwd_core
-PUBLIC
+set(SRC
     ./utility/color.h
+    ./utility/color.cpp
     ./utility/error.h
+    ./utility/error.cpp
     ./utility/hash.h
     ./utility/type_info.h
     ./resource_handle.h
     ./resource_manager.h
     ./time.h
-    ./transform.h
-    ./window.h
-PRIVATE
-    ./utility/color.cpp
-    ./utility/error.cpp
     ./time.cpp
+    ./transform.h
     ./transform.cpp
+    ./window.h
     ./window.cpp
+)
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SRC})
+
+add_library(glfwd_core STATIC ${SRC})
+target_include_directories(glfwd_core
+PUBLIC
+    ${CMAKE_SOURCE_DIR}/src
 )
 
 # Options

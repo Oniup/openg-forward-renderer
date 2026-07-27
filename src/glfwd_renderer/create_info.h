@@ -2,10 +2,19 @@
 
 namespace glfwd {
 
+enum class SwapInterval
+{
+    DoubleBuffering = 0,  // VSync Disabled
+    VSync           = 1,  // VSync Enabled, if misses vertical retrace, it'll wait for the next
+    AdaptiveVSync   = -1, // VSync Enabled, if misses vertical retrace, it'll swap immediately
+};
+
 struct RendererCreateInfo
 {
-    bool EnableVSync               = true;
-    bool EnableOpenGLDebugCallback = true;
+    SwapInterval SwapIntervalMode                = SwapInterval::AdaptiveVSync;
+    bool         EnableVSync                     = true;
+    bool         EnableHardwareDebugCallback     = true;
+    bool         EnableDepthForScreenFramebuffer = true; // TODO: default to false
 };
 
 } // namespace glfwd

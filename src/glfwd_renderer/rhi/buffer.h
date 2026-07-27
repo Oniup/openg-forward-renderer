@@ -5,7 +5,7 @@
 #include <string_view>
 #include <vector>
 
-#include "glfwd_renderer/draw_modes.h"
+#include "glfwd_renderer/draw_mode.h"
 
 namespace glfwd {
 
@@ -35,7 +35,7 @@ public:
     Buffer(const Buffer& other)            = delete;
     Buffer& operator=(const Buffer& other) = delete;
 
-    void Bind(uint32_t binding_index = 0);
+    void Bind(uint32_t binding_index = 0) const;
     bool IsValid() const;
 
     Type     GetType() const { return m_Type; }
@@ -78,7 +78,7 @@ struct VertexAttribute
     };
     using enum DataType;
 
-    DataType Type        = VertexAttribute::Float;
+    DataType Type        = Float;
     size_t   BufferIndex = 0;     // Target buffer index who's data to read
     size_t   Instance    = 0;     // if > 0 then sets glVertexAttribDivisor(i, Instance)
     bool     Normalized  = false; // If data entry is normalized or not
@@ -94,25 +94,28 @@ class VertexArray
 {
 public:
     VertexArray() = default;
-    VertexArray(const VertexAttribute* attributes, size_t attribute_count,
-                std::vector<Buffer>&& vertex_buffers, Buffer&& element_buffer = Buffer());
-    VertexArray(const VertexAttribute* attributes, size_t attribute_count, Buffer&& vertex_buffer,
+    VertexArray(PrimitiveMode primitive_mode, const VertexAttribute* attributes,
+                size_t attribute_count, std::vector<Buffer>&& vertex_buffers,
                 Buffer&& element_buffer = Buffer());
+    VertexArray(PrimitiveMode primitive_mode, const VertexAttribute* attributes,
+                size_t attribute_count, Buffer&& vertex_buffer, Buffer&& element_buffer = Buffer());
     ~VertexArray();
 
     template <size_t AttributeCount>
-    VertexArray(const std::array<VertexAttribute, AttributeCount>& attributes,
+    VertexArray(PrimitiveMode                                      primitive_mode,
+                const std::array<VertexAttribute, AttributeCount>& attributes,
                 std::vector<Buffer>&& vertex_buffers, Buffer&& element_buffer = Buffer())
-        : VertexArray(attributes.data(), attributes.size(), std::move(vertex_buffers),
-                      std::move(element_buffer))
+        : VertexArray(primitive_mode, attributes.data(), attributes.size(),
+                      std::move(vertex_buffers), std::move(element_buffer))
     {
     }
 
     template <size_t AttributeCount>
-    VertexArray(const std::array<VertexAttribute, AttributeCount>& attributes,
+    VertexArray(PrimitiveMode                                      primitive_mode,
+                const std::array<VertexAttribute, AttributeCount>& attributes,
                 Buffer&& vertex_buffer, Buffer&& element_buffer = Buffer())
-        : VertexArray(attributes.data(), attributes.size(), std::move(vertex_buffer),
-                      std::move(element_buffer))
+        : VertexArray(primitive_mode, attributes.data(), attributes.size(),
+                      std::move(vertex_buffer), std::move(element_buffer))
     {
     }
 
@@ -125,7 +128,8 @@ public:
     bool IsValid() const;
 
     void Bind() const;
-    void Draw(PrimitiveMode mode, uint32_t offset = 0, uint32_t size = 0) const;
+    void Draw(uint32_t offset = 0, uint32_t size = 0) const;
+    void Draw(PrimitiveMode primitive_mode, uint32_t offset = 0, uint32_t size = 0) const;
 
     std::vector<Buffer>& GetArrayBuffers() { return m_ArrayBuffers; }
     Buffer&              GetElementBuffer() { return m_ElementBuffer; }
@@ -137,6 +141,7 @@ private:
     void InitializeAttributes(const VertexAttribute* attributes, size_t count);
 
     uint32_t            m_ID;
+    PrimitiveMode       m_PrimitiveMode;
     std::vector<Buffer> m_ArrayBuffers;
     Buffer              m_ElementBuffer;
 };

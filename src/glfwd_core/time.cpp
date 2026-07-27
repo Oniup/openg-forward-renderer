@@ -28,7 +28,7 @@ void Timer::Start()
 double Timestep::GetElapsedSeconds()
 {
     uint64_t counter = SDL_GetTicks();
-    return counter / 1000.0;
+    return static_cast<double>(counter) / 1000.0;
 }
 
 uint64_t Timestep::GetElapsedMilliseconds()
@@ -39,8 +39,10 @@ uint64_t Timestep::GetElapsedMilliseconds()
 void Timestep::CalculateDeltaTime()
 {
     uint64_t current_time = SDL_GetPerformanceCounter();
-    m_DeltaTime = (float)(current_time - m_LastTime) / (float)SDL_GetPerformanceFrequency();
-    m_LastTime  = current_time;
+
+    m_DeltaTime = static_cast<float>(current_time - m_LastTime) /
+                  static_cast<float>(SDL_GetPerformanceFrequency());
+    m_LastTime = current_time;
 }
 
 } // namespace glfwd

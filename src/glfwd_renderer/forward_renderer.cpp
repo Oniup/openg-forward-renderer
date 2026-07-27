@@ -2,11 +2,9 @@
 
 #include <SDL3/SDL_init.h>
 #include <SDL3/SDL_video.h>
-#include <glad/gl.h>
 
 #include "glfwd_core/resource_manager.h"
 #include "glfwd_core/window.h"
-#include "glfwd_renderer/create_info.h"
 #include "glfwd_renderer/rhi/context.h"
 #include "glfwd_renderer/rhi/shader.h"
 #include "glfwd_renderer/rhi/texture.h"
@@ -15,7 +13,7 @@ namespace glfwd {
 
 ForwardRenderer::ForwardRenderer(ResourceManager* resources_manager, const RendererCreateInfo& info)
     : m_ResourceManager(resources_manager),
-      m_Context(new OpenGLContext(info.EnableOpenGLDebugCallback)) // SDL and OpenGL Attributes
+      m_Context(new OpenGLContext(info)) // SDL and OpenGL Attributes
 {
 }
 
@@ -34,7 +32,7 @@ void ForwardRenderer::InitializeBackend(Window* window)
     m_Context->InitializeBackend(window);
 }
 
-void ForwardRenderer::InitializeResources()
+void ForwardRenderer::InitializeResources() const
 {
     // Initialize pools
     m_ResourceManager->InitializePool<Shader>();
@@ -65,7 +63,7 @@ void ForwardRenderer::InitializeResources()
     intern::InitializeMaterialDefaultTextures(default_material_white);
 }
 
-void ForwardRenderer::SwapBuffers()
+void ForwardRenderer::SwapBuffers() const
 {
     SDL_GL_SwapWindow(m_Window->GetInternalContext());
 }

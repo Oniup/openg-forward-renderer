@@ -15,7 +15,7 @@ namespace intern {
 class Shader;
 class ResourceManager;
 
-struct PhongMaterial
+struct BlinnPhongMaterial
 {
     struct ColorAttribute
     {
@@ -37,7 +37,8 @@ struct PhongMaterial
     glm::vec2 TilingFactor = glm::vec2(1.0f);
     float     Shininess    = 1.0f;
 
-    void PushConstantsToShader(const Shader* shader, ResourceManager* resources);
+    bool IsValid() const;
+    void PushConstantsToShader(const Shader* shader, ResourceManager* resources) const;
 };
 
 } // namespace glfwd

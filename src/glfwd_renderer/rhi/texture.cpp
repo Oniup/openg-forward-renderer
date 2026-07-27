@@ -11,12 +11,11 @@
 #include <array>
 
 #include "glfwd_core/utility/error.h"
-#include "glfwd_renderer/draw_modes.h"
 #include "glfwd_renderer/rhi/context.h"
 
 namespace glfwd {
 
-Texture::Texture(const TextureCreateInfo info)
+Texture::Texture(const TextureCreateInfo& info)
     : m_Type(info.Type),
       m_Width(info.Width),
       m_Height(info.Height),
@@ -25,7 +24,7 @@ Texture::Texture(const TextureCreateInfo info)
     LoadOpenGLTexture(nullptr, info);
 }
 
-Texture::Texture(const uint8_t* buffer, size_t buffer_size, const TextureCreateInfo info)
+Texture::Texture(const uint8_t* buffer, size_t buffer_size, const TextureCreateInfo& info)
     : m_Type(info.Type)
 {
     if (buffer != nullptr && buffer_size > 0)
@@ -34,7 +33,7 @@ Texture::Texture(const uint8_t* buffer, size_t buffer_size, const TextureCreateI
         if (!stream)
         {
             GLFWD_ERROR("Failed to load embedded {} texture buffer as a stream: {}",
-                        TEXTURE_TYPE_NAMES[(int)info.Type],
+                        TEXTURE_TYPE_NAMES[static_cast<int>(info.Type)],
                         SDL_GetError());
             return;
         }
@@ -43,7 +42,7 @@ Texture::Texture(const uint8_t* buffer, size_t buffer_size, const TextureCreateI
         if (!image_surface)
         {
             GLFWD_ERROR("Failed to load embedded {} texture buffer: {}",
-                        TEXTURE_TYPE_NAMES[(int)info.Type],
+                        TEXTURE_TYPE_NAMES[static_cast<int>(info.Type)],
                         SDL_GetError());
             SDL_CloseIO(stream);
         }
@@ -54,18 +53,19 @@ Texture::Texture(const uint8_t* buffer, size_t buffer_size, const TextureCreateI
             if (LoadOpenGLTexture(image_surface, info))
             {
                 GLFWD_INFO("Initialized embedded {} ({}, {})",
-                           TEXTURE_TYPE_NAMES[(int)info.Type],
+                           TEXTURE_TYPE_NAMES[static_cast<int>(info.Type)],
                            m_Width,
                            m_Height);
             }
         }
         else
-            GLFWD_ERROR("Failed to load embedded {} texture", TEXTURE_TYPE_NAMES[(int)info.Type]);
+            GLFWD_ERROR("Failed to load embedded {} texture",
+                        TEXTURE_TYPE_NAMES[static_cast<int>(info.Type)]);
         SDL_DestroySurface(image_surface);
     }
 }
 
-Texture::Texture(std::string_view path, const TextureCreateInfo info)
+Texture::Texture(std::string_view path, const TextureCreateInfo& info)
     : m_Type(info.Type)
 {
     GLFWD_ASSERT_STRING_VIEW_NULL_TERMINATED(path);
@@ -82,7 +82,7 @@ Texture::Texture(std::string_view path, const TextureCreateInfo info)
         if (LoadOpenGLTexture(image_surface, info))
         {
             GLFWD_INFO("Initialized {} ({}, {}) from path {}",
-                       TEXTURE_TYPE_NAMES[(int)info.Type],
+                       TEXTURE_TYPE_NAMES[static_cast<int>(info.Type)],
                        m_Width,
                        m_Height,
                        path);
@@ -90,25 +90,18 @@ Texture::Texture(std::string_view path, const TextureCreateInfo info)
     }
     else
     {
-        GLFWD_ERROR(
-            "Failed to load {} texture from path {}", TEXTURE_TYPE_NAMES[(int)info.Type], path);
+        GLFWD_ERROR("Failed to load {} texture from path {}",
+                    TEXTURE_TYPE_NAMES[static_cast<int>(info.Type)],
+                    path);
     }
     SDL_DestroySurface(image_surface);
 }
 
-Texture::Texture(SDL_Surface* surface, const TextureCreateInfo info)
+Texture::Texture(SDL_Surface* surface, const TextureCreateInfo& info)
     : m_Type(info.Type)
 {
     if (!surface)
     {
-        if (info.Width < 0 || info.Height < 0)
-        {
-            GLFWD_ERROR(
-                "Cannot create {} without a surface provided or at least a width and height",
-                TEXTURE_TYPE_NAMES[(int)info.Type]);
-            return;
-        }
-
         m_Width  = info.Width;
         m_Height = info.Height;
         m_Depth  = info.Depth;
@@ -201,7 +194,7 @@ void Texture::LoadFromSurface(SDL_Surface* image_surface, const TextureCreateInf
         LoadOpenGLTexture(image_surface, info);
 }
 
-bool Texture::LoadOpenGLTexture(SDL_Surface* surface, const TextureCreateInfo& info)
+bool Texture::LoadOpenGLTexture(const SDL_Surface* surface, const TextureCreateInfo& info)
 {
     glGenTextures(1, &m_ID);
 
@@ -291,8 +284,8 @@ bool Texture::LoadOpenGLTexture(SDL_Surface* surface, const TextureCreateInfo& i
     return true;
 }
 
-bool Texture::LoadOpenGLCubeMapFromSurface(SDL_Surface* surface, const TextureCreateInfo& info,
-                                           int32_t base_format, int32_t output_format)
+bool Texture::LoadOpenGLCubeMapFromSurface(const SDL_Surface* surface, const TextureCreateInfo& info,
+                                           int32_t base_format, int32_t output_format) const
 {
     if (!surface)
     {
@@ -306,7 +299,7 @@ bool Texture::LoadOpenGLCubeMapFromSurface(SDL_Surface* surface, const TextureCr
         return false;
     }
 
-    std::array<glm::ivec2, 6> face_offsets = {
+    std::array face_offsets = {
         glm::ivec2{2, 1}, // Right    (Positive X)
         glm::ivec2{0, 1}, // Left     (Negative X)
         glm::ivec2{1, 0}, // Top      (Positive Y)
@@ -343,7 +336,7 @@ bool Texture::LoadOpenGLCubeMapFromSurface(SDL_Surface* surface, const TextureCr
     return true;
 }
 
-bool Texture::SetSizeFromSurface(SDL_Surface* surface, const TextureCreateInfo& info)
+bool Texture::SetSizeFromSurface(const SDL_Surface* surface, const TextureCreateInfo& info)
 {
     if (surface)
     {

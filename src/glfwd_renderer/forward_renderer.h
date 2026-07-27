@@ -1,6 +1,7 @@
 #pragma once
 
 #include "glfwd_renderer/render_queue.h"
+
 typedef struct SDL_GLContextState* SDL_GLContext;
 
 namespace glfwd {
@@ -18,12 +19,12 @@ public:
     ~ForwardRenderer();
 
     void InitializeBackend(Window* window);
-    void InitializeResources();
+    void InitializeResources() const;
 
     RenderQueue*       GetRenderQueue() { return &m_RenderQueue; }
     const RenderQueue* GetRenderQueue() const { return &m_RenderQueue; }
 
-    void SwapBuffers();
+    void SwapBuffers() const;
 
 private:
     RenderQueue      m_RenderQueue;

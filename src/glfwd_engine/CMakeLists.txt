@@ -1,17 +1,16 @@
 # Engine
 # ==============================================================================
-add_library(glfwd_engine STATIC)
+set(SRC
+    ./application.h
+    ./application.cpp
+    ./create_info.h
+)
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SRC})
+
+add_library(glfwd_engine STATIC ${SRC})
 target_include_directories(glfwd_engine
 PUBLIC
     ${CMAKE_SOURCE_DIR}/src
-)
-
-target_sources(glfwd_engine
-PUBLIC
-    ./application.h
-    ./create_info.h
-PRIVATE
-    ./application.cpp
 )
 
 # Dependencies

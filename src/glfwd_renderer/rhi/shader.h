@@ -6,6 +6,7 @@
 #include <glm/ext/vector_float3.hpp>
 #include <glm/ext/vector_float4.hpp>
 
+#include <string>
 #include <string_view>
 
 namespace glfwd {
@@ -13,7 +14,6 @@ namespace glfwd {
 class Texture;
 
 // TODO: Push constants for
-//          - Texture
 //          - Framebuffer
 class Shader
 {
@@ -32,6 +32,8 @@ public:
 
     void     Bind() const;
     uint32_t GetID() const { return m_ID; }
+    bool     ReloadShader(std::string_view new_vertex = "", std::string_view new_fragment = "",
+                          std::string_view new_geometry = "");
 
     void PushConstant(std::string_view location, int32_t val) const;
     void PushConstant(std::string_view location, uint32_t val) const;
@@ -49,9 +51,18 @@ public:
     void PushConstant(const Texture* texture, uint32_t active_id) const;
 
 private:
+    static uint32_t LoadShaderFromPath(std::string_view vertex, std::string_view fragment,
+                                       std::string_view geometry);
+    
     uint32_t GetUniformLocation(std::string_view location) const;
 
     uint32_t m_ID = 0;
+
+#ifdef GLFWD_SHADER_HOT_RELOAD
+    std::string m_VertexPath;
+    std::string m_FragmentPath;
+    std::string m_GeometryPath;
+#endif
 };
 
 // TODO:

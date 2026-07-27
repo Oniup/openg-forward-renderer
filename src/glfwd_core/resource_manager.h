@@ -2,10 +2,8 @@
 
 #include <ankerl/unordered_dense.h>
 #include <fmt/format.h>
-#include <fmt/std.h>
 
 #include <concepts>
-#include <cstdint>
 #include <memory>
 #include <string>
 #include <vector>
@@ -20,7 +18,6 @@ class IResourcePool
 {
 public:
     static constexpr uint16_t InvalidIndex = 0xFFFF;
-
     virtual ~IResourcePool() = default;
 
 protected:
@@ -33,6 +30,8 @@ template <typename T>
 class ResourcePool : public IResourcePool
 {
 public:
+    using PFN_ExecutePerElement = std::function<bool(T* element)>;
+    
     ResourcePool()           = default;
     ~ResourcePool() override = default;
 
@@ -121,9 +120,7 @@ public:
     {
         if (Contains(handle))
         {
-            m_Data[handle.m_Index]         = T();
-            m_Generations[handle.m_Index] += 1; // Increment resource
-            m_FreeSlots.push_back(handle.m_Index);
+            DestroyResourceAtIndex(handle.m_Index);
             return;
         }
         GLFWD_WARN("Attempt to destroy resource '{}' with ID {}, it doesn't exist within pool",
@@ -131,7 +128,38 @@ public:
                    handle.m_ID);
     }
 
+    /// Used to iterate over element within pool and execute. Lambda should return false to
+    /// remove element from pool, otherwise return true to leave.
+    void ExecuteForEach(PFN_ExecutePerElement pfn_execute)
+    {
+        for (size_t i = 0; i < m_Data.size(); i++)
+        {
+            bool skip = false;
+            for (size_t free_index : m_FreeSlots)
+            {
+                if (free_index == i)
+                {
+                    skip = true;
+                    break;
+                }
+            }
+            if (!skip)
+            {
+                bool keep_element = pfn_execute(&m_Data[i]);
+                if (!keep_element)
+                    DestroyResourceAtIndex(i);
+            }
+        }
+    }
+
 private:
+    void DestroyResourceAtIndex(uint16_t index)
+    {
+        m_Data[index]         = T();
+        m_Generations[index] += 1; // Increment resource
+        m_FreeSlots.push_back(index);
+    }
+    
     std::vector<T> m_Data; // Packed resource data
 };
 
@@ -258,9 +286,25 @@ public:
         if (!ContainsPool<T>())
             return ResourceHandle<T>();
 
-        auto pool =
+        auto* pool =
             static_cast<const ResourcePool<T>*>(m_ResourcePools.at(TypeInfo<T>::GetUUID()).get());
         return pool->QueryHandle(name);
+    }
+
+    template <typename T>
+    void ExecuteOverPool(ResourcePool<T>::PFN_ExecutePerElement pfn_execute)
+    {
+        if (!ContainsPool<T>())
+        {
+            GLFWD_ERROR(
+                "{} resource pool has not been created, meaning there is nothing to iterate over",
+                TypeInfo<T>::GetName());
+            return;
+        }
+
+        auto* pool =
+            static_cast<ResourcePool<T>*>(m_ResourcePools.at(TypeInfo<T>::GetUUID()).get());
+        pool->ExecuteForEach(pfn_execute);
     }
 
 private:
