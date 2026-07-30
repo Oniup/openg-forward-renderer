@@ -11,6 +11,7 @@ public:
     void SubmitToRenderQueue(glfwd::RenderQueue* render_queue) const override;
 
 private:
+    glfwd::Transform                     m_Transform;
     glfwd::ResourceHandle<glfwd::Shader> m_ShaderHandle;
     glfwd::ResourceHandle<glfwd::Model>  m_ModelHandle;
 };

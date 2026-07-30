@@ -20,10 +20,7 @@ struct Actor
 {
     virtual ~Actor() = default;
 
-    glfwd::Transform&       GetTransform() { return m_Transform; }
-    const glfwd::Transform& GetTransform() const { return m_Transform; }
-
-    virtual void OnInitialize() = 0;
+    virtual void OnInitialize() {};
     virtual void OnEvent(const SDL_Event& event) {}
     virtual void OnUpdate(const glfwd::Timestep& timestep) {}
 
@@ -35,8 +32,7 @@ struct Actor
 private:
     friend Game;
 
-    Game*            m_Owner = nullptr;
-    glfwd::Transform m_Transform;
+    Game* m_Owner = nullptr;
 };
 
 } // namespace glfwd_example

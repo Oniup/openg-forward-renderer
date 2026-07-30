@@ -35,7 +35,7 @@ void Cube::OnInitialize()
 
 void Cube::SubmitToRenderQueue(glfwd::RenderQueue* render_queue) const
 {
-    render_queue->SubmitModel(m_ShaderHandle, GetTransform().CreateModelMatrix(), m_ModelHandle);
+    render_queue->SubmitModel(m_ShaderHandle, m_Transform.CreateModelMatrix(), m_ModelHandle);
 }
 
 } // namespace glfwd_example
