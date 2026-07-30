@@ -18,11 +18,10 @@ public:
     Application() = default;
     virtual ~Application();
 
-    Application(Application&& other) = delete;
-    Application(const Application& other) = delete;
-    Application& operator=(Application&& other) = delete;
+    Application(Application&& other)                 = delete;
+    Application(const Application& other)            = delete;
+    Application& operator=(Application&& other)      = delete;
     Application& operator=(const Application& other) = delete;
-
 
     void Initialize(const ApplicationCreateInfo& create_info);
     void Run();
@@ -31,7 +30,6 @@ protected:
     virtual void OnInitialize()                                 = 0;
     virtual void OnEvent(const SDL_Event& event)                = 0;
     virtual void OnUpdate(const Timestep& timestep)             = 0;
-    virtual void OnLateUpdate(const Timestep& timestep)         = 0;
     virtual void SubmitToRenderQueue(RenderQueue* render_queue) = 0;
 
     ForwardRenderer* m_Renderer        = nullptr;

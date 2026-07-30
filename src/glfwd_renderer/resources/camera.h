@@ -4,6 +4,8 @@
 #include <glm/ext/vector_float3.hpp>
 #include <glm/ext/vector_float4.hpp>
 
+#include "glfwd_core/resource_handle.h"
+
 namespace glfwd {
 
 enum class ProjectionMode
@@ -29,13 +31,15 @@ struct CameraBase
     float          FieldOfView       = 45.0f;
     ProjectionMode Projection        = ProjectionMode::Perspective;
 
+    virtual ~CameraBase() = default;
+
     RenderCamera GetRenderCamera(int32_t viewport_width, int32_t viewport_height) const;
     glm::mat4    CreateProjectionMatrix(int32_t viewport_width, int32_t viewport_height) const;
 
     virtual glm::mat4 CreateViewMatrix() const = 0;
 };
 
-struct TargetCamera : public CameraBase
+struct TargetCamera : CameraBase
 {
     glm::vec3 Target = glm::vec3(0.0f);
     glm::vec3 Up     = glm::vec3(0.0f, 1.0f, 0.0f);
@@ -43,7 +47,7 @@ struct TargetCamera : public CameraBase
     glm::mat4 CreateViewMatrix() const override;
 };
 
-struct DirectionalCamera : public CameraBase
+struct DirectionalCamera : CameraBase
 {
     glm::vec3 Forward = glm::vec3(0.0f, 0.0f, -1.0f);
     glm::vec3 Up      = glm::vec3(0.0f, 1.0f, 0.0f);

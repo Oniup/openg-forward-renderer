@@ -20,16 +20,13 @@ public:
     static constexpr std::string_view TypeName = TypeInfo<T>::GetName();
     static constexpr uint64_t         TypeID   = TypeInfo<T>::GetUUID();
 
-    ResourceHandle()
-        : m_ID(InvalidResourceHandleID)
-    {
-    }
-
+    ResourceHandle()                                       = default;
     ResourceHandle(ResourceHandle&& other)                 = default;
     ResourceHandle(const ResourceHandle& other)            = default;
     ResourceHandle& operator=(ResourceHandle&& other)      = default;
     ResourceHandle& operator=(const ResourceHandle& other) = default;
 
+    uint32_t GetID() const { return m_ID; }
     bool IsValid() const { return m_ID != InvalidResourceHandleID; }
     bool operator==(const ResourceHandle& other) const { return m_ID == other.m_ID; }
 
@@ -57,3 +54,12 @@ private:
 };
 
 } // namespace glfwd
+
+template <typename T>
+struct std::hash<glfwd::ResourceHandle<T>>
+{
+    size_t operator()(const glfwd::ResourceHandle<T>& handle) const
+    {
+        return std::hash<uint32_t>{}(handle.GetID());
+    }
+};

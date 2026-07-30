@@ -4,10 +4,12 @@
 #include <SDL3/SDL_video.h>
 #include <glad/gl.h>
 
+#include "glfwd_core/core_context.h"
 #include "glfwd_core/utility/error.h"
 #include "glfwd_core/window.h"
 #include "glfwd_renderer/create_info.h"
 #include "glfwd_renderer/draw_mode.h"
+#include "glfwd_renderer/rhi/framebuffer.h"
 #include "glfwd_renderer/rhi/texture.h"
 
 namespace glfwd {
@@ -24,7 +26,6 @@ void GLAPIENTRY glDebugOutputCallback(GLenum source, GLenum type, unsigned int i
 
     std::string_view source_str;
     std::string_view type_str;
-    std::string_view severity_str;
 
     switch (source)
     {
@@ -34,6 +35,7 @@ void GLAPIENTRY glDebugOutputCallback(GLenum source, GLenum type, unsigned int i
     case GL_DEBUG_SOURCE_THIRD_PARTY:     source_str = "Third Party"; break;
     case GL_DEBUG_SOURCE_APPLICATION:     source_str = "Application"; break;
     case GL_DEBUG_SOURCE_OTHER:           source_str = "Other"; break;
+    default:                              source_str = "Unknown"; break;
     }
 
     switch (type)
@@ -47,14 +49,16 @@ void GLAPIENTRY glDebugOutputCallback(GLenum source, GLenum type, unsigned int i
     case GL_DEBUG_TYPE_PUSH_GROUP:          type_str = "Push Group"; break;
     case GL_DEBUG_TYPE_POP_GROUP:           type_str = "Pop Group"; break;
     case GL_DEBUG_TYPE_OTHER:               type_str = "Other"; break;
+    default:                                type_str = "Unknown"; break;
     }
 
     switch (severity)
     {
-    case GL_DEBUG_SEVERITY_HIGH:         GLFWD_FATAL(EFMT, id, source_str, type_str, message); break;
+    case GL_DEBUG_SEVERITY_HIGH:         GLFWD_FATAL(EFMT, id, source_str, type_str, message); 
     case GL_DEBUG_SEVERITY_MEDIUM:       GLFWD_ERROR(EFMT, id, source_str, type_str, message); break;
     case GL_DEBUG_SEVERITY_LOW:          GLFWD_WARN(EFMT, id, source_str, type_str, message); break;
     case GL_DEBUG_SEVERITY_NOTIFICATION: GLFWD_INFO(EFMT, id, source_str, type_str, message); break;
+    default:                             GLFWD_WARN(EFMT, id, source_str, type_str, message); break;
     }
 }
 
@@ -71,6 +75,7 @@ int32_t OpenGLContext::ConvertPrimitiveModeToOpenGL(PrimitiveMode mode)
     case PrimitiveMode::TriangleFan:   return GL_TRIANGLE_FAN;
     case PrimitiveMode::Patches:       return GL_PATCHES;
     }
+    return -1;
 }
 
 int32_t OpenGLContext::ConvertPolygonModeToOpenGL(PolygonMode mode)
@@ -81,6 +86,7 @@ int32_t OpenGLContext::ConvertPolygonModeToOpenGL(PolygonMode mode)
     case PolygonMode::Points: return GL_POINT;
     case PolygonMode::Fill:   return GL_FILL;
     }
+    return -1;
 }
 
 int32_t OpenGLContext::ConvertFaceModeToOpenGL(FaceMode mode)
@@ -91,6 +97,7 @@ int32_t OpenGLContext::ConvertFaceModeToOpenGL(FaceMode mode)
     case FaceMode::Back:         return GL_BACK;
     case FaceMode::FrontAndBack: return GL_FRONT_AND_BACK;
     }
+    return -1;
 }
 
 uint32_t OpenGLContext::ConvertTextureTypeToOpenGL(TextureType type)
@@ -101,6 +108,7 @@ uint32_t OpenGLContext::ConvertTextureTypeToOpenGL(TextureType type)
     case TextureType::Tex3D:   return GL_TEXTURE_3D;
     case TextureType::CubeMap: return GL_TEXTURE_CUBE_MAP;
     }
+    return -1;
 }
 
 int32_t OpenGLContext::ConvertTextureWrapToOpenGL(TextureWrap wrap)
@@ -112,6 +120,7 @@ int32_t OpenGLContext::ConvertTextureWrapToOpenGL(TextureWrap wrap)
     case TextureWrap::ClampToEdge:    return GL_CLAMP_TO_EDGE;
     case TextureWrap::ClampToBorder:  return GL_CLAMP_TO_BORDER;
     }
+    return -1;
 }
 
 void OpenGLContext::ConvertTextureFormatToOpenGL(TextureFormat format, uint32_t& base_format,
@@ -154,6 +163,17 @@ void OpenGLContext::ConvertTextureFiltersToOpenGL(TextureFilter min_filter,
             break;
         }
     }
+}
+
+uint32_t OpenGLContext::ConvertRenderBufferTypeToOpenGL(RenderBufferType type)
+{
+    switch (type)
+    {
+    case RenderBufferType::Depth24:         return GL_DEPTH_COMPONENT;
+    case RenderBufferType::Depth24Stencil8: return GL_DEPTH24_STENCIL8;
+    case RenderBufferType::Depth32F:        return GL_DEPTH_COMPONENT32F;
+    }
+    return -1;
 }
 
 int32_t OpenGLContext::GetMaxMSAASamples()
@@ -200,14 +220,14 @@ OpenGLContext::~OpenGLContext()
     Shutdown();
 }
 
-void OpenGLContext::InitializeBackend(Window* window)
+void OpenGLContext::InitializeBackend()
 {
-    m_InternalContext = SDL_GL_CreateContext(window->GetInternalContext());
+    m_InternalContext = SDL_GL_CreateContext(CoreContext::GetWindow()->GetInternalContext());
     if (!m_InternalContext)
         GLFWD_FATAL("Failed to initialize OpenGL context: {}", SDL_GetError());
 
     // Initialize glad
-    int glad_version = gladLoadGL((GLADloadfunc)SDL_GL_GetProcAddress);
+    int glad_version = gladLoadGL(static_cast<GLADloadfunc>(SDL_GL_GetProcAddress));
     if (glad_version == 0)
     {
         Shutdown();

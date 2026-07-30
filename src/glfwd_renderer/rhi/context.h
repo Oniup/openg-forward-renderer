@@ -18,6 +18,7 @@ enum class TextureWrap;
 enum class TextureFormat;
 enum class TextureFilter;
 enum class MipmapMode;
+enum class RenderBufferType;
 
 class OpenGLContext
 {
@@ -36,26 +37,27 @@ public:
                                               MipmapMode mipmap, int32_t& min_out,
                                               int32_t& mag_out);
 
+    static uint32_t ConvertRenderBufferTypeToOpenGL(RenderBufferType type);
+
     static int32_t GetMaxMSAASamples();
     static int32_t GetMaxAnisotropy();
 
     OpenGLContext(const RendererCreateInfo& info);
     ~OpenGLContext();
 
-    void InitializeBackend(Window* window);
+    void InitializeBackend();
     void Shutdown();
     void SetSwapIntervalMode(SwapInterval mode);
 
-    SDL_GLContext       GetInternalContext() { return m_InternalContext; }
-    const SDL_GLContext GetInternalContext() const { return m_InternalContext; }
+    SDL_GLContext GetInternalContext() const { return m_InternalContext; }
 
 private:
     static OpenGLContext* s_Instance;
 
     SwapInterval  m_SwapIntervalMode;
     SDL_GLContext m_InternalContext = nullptr;
-    int32_t       m_MaxMSAASamples;
-    int32_t       m_MaxAnisotropy;
+    int32_t       m_MaxMSAASamples  = 0;
+    int32_t       m_MaxAnisotropy   = 0;
 };
 
 } // namespace glfwd

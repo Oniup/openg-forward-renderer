@@ -1,5 +1,6 @@
 #include "glfwd_renderer/resources/material.h"
 
+#include "glfwd_core/core_context.h"
 #include "glfwd_core/resource_manager.h"
 #include "glfwd_renderer/rhi/shader.h"
 
@@ -43,11 +44,9 @@ BlinnPhongMaterial::ColorAttribute::ColorAttribute(glm::vec3                    
 {
 }
 
-void BlinnPhongMaterial::SetupShaderMaterial(const Shader* shader, bool bind_shader)
+void BlinnPhongMaterial::SetupShaderMaterial(const Shader* shader)
 {
-    if (bind_shader)
-        shader->Bind();
-
+    shader->Bind();
     shader->PushConstant("u_Material.Diffuse.Texture", 0);
     shader->PushConstant("u_Material.Specular.Texture", 1);
     shader->PushConstant("u_Material.Emission.Texture", 2);
@@ -58,8 +57,7 @@ bool BlinnPhongMaterial::IsValid() const
     return true;
 }
 
-void BlinnPhongMaterial::PushConstantsToShader(const Shader*    shader,
-                                               ResourceManager* resources) const
+void BlinnPhongMaterial::PushConstantsToShader(const Shader* shader) const
 {
     // Flat Colors
     shader->PushConstant("u_Material.Diffuse.Color", Diffuse.Color);
@@ -67,9 +65,10 @@ void BlinnPhongMaterial::PushConstantsToShader(const Shader*    shader,
     shader->PushConstant("u_Material.Emission.Color", Emission.Color);
 
     // Textures
-    shader->PushConstant(resources->QueryResource(Diffuse.TextureHandle), 0);
-    shader->PushConstant(resources->QueryResource(Specular.TextureHandle), 1);
-    shader->PushConstant(resources->QueryResource(Emission.TextureHandle), 2);
+    ResourceManager* resource_manager = CoreContext::GetResourceManager();
+    shader->PushConstant(resource_manager->QueryResource(Diffuse.TextureHandle), 0);
+    shader->PushConstant(resource_manager->QueryResource(Specular.TextureHandle), 1);
+    shader->PushConstant(resource_manager->QueryResource(Emission.TextureHandle), 2);
 
     // Other properties
     shader->PushConstant("u_Material.Shininess", Shininess);

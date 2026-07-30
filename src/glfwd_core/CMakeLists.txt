@@ -1,20 +1,23 @@
 # Core
 # ==============================================================================
 set(SRC
-    ./utility/color.h
-    ./utility/color.cpp
-    ./utility/error.h
-    ./utility/error.cpp
-    ./utility/hash.h
-    ./utility/type_info.h
-    ./resource_handle.h
-    ./resource_manager.h
-    ./time.h
-    ./time.cpp
-    ./transform.h
-    ./transform.cpp
-    ./window.h
-    ./window.cpp
+        utility/color.h
+        utility/color.cpp
+        utility/error.h
+        utility/error.cpp
+        utility/hash.h
+        utility/type_info.h
+        resource_handle.h
+        resource_manager.h
+
+        core_context.h
+        core_context.cpp
+        time.h
+        time.cpp
+        transform.h
+        transform.cpp
+        window.h
+        window.cpp
 )
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SRC})
 

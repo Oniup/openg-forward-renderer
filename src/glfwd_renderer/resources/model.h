@@ -27,22 +27,27 @@ class Mesh
 {
 public:
     /// Set vertex_color to glm::vec3(0.0f) to apply the rainbow UV vertex colors
-    static Mesh GenerateCube(const BlinnPhongMaterial& material     = {},
-                             glm::vec3                 vertex_color = glm::vec3(1.0f));
+    static Mesh GenerateCube(const BlinnPhongMaterial& material          = {},
+                             glm::vec3                 vertex_color      = glm::vec3(1.0f),
+                             FaceMode                  face_culling_mode = FaceMode::Back);
     /// Set vertex_color to glm::vec3(0.0f) to apply the rainbow UV vertex colors
-    static Mesh GeneratePlane(const BlinnPhongMaterial& material     = {},
-                              glm::vec3                 vertex_color = glm::vec3(1.0f));
+    static Mesh GeneratePlane(const BlinnPhongMaterial& material          = {},
+                              glm::vec3                 vertex_color      = glm::vec3(1.0f),
+                              FaceMode                  face_culling_mode = FaceMode::Back);
     /// Set vertex_color to glm::vec3(0.0f) to apply the rainbow UV vertex colors
     static Mesh GenerateSphere(size_t revolutions_x = 20, size_t revolutions_y = 20,
-                               const BlinnPhongMaterial& material     = {},
-                               glm::vec3                 vertex_color = glm::vec3(1.0f));
+                               const BlinnPhongMaterial& material          = {},
+                               glm::vec3                 vertex_color      = glm::vec3(1.0f),
+                               FaceMode                  face_culling_mode = FaceMode::Back);
 
     Mesh() = default;
     Mesh(const std::vector<Vertex>& vertices, const BlinnPhongMaterial& material = {},
-         bool dynamic_draw = false, PrimitiveMode primitive_mode = PrimitiveMode::Triangles);
+         bool dynamic_draw = false, PrimitiveMode primitive_mode = PrimitiveMode::Triangles,
+         FaceMode face_culling_mode = FaceMode::Back);
     Mesh(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices,
          const BlinnPhongMaterial& material = {}, bool dynamic_draw = false,
-         PrimitiveMode primitive_mode = PrimitiveMode::Triangles);
+         PrimitiveMode primitive_mode    = PrimitiveMode::Triangles,
+         FaceMode      face_culling_mode = FaceMode::Back);
 
     Mesh(Mesh&& other);
     Mesh& operator=(Mesh&& other);
@@ -57,10 +62,12 @@ public:
 
     BlinnPhongMaterial&       GetMaterial() { return m_Material; }
     const BlinnPhongMaterial& GetMaterial() const { return m_Material; }
+    FaceMode                  GetFaceCullingMode() const { return m_FaceCullingMode; }
 
 private:
     BlinnPhongMaterial m_Material;
     VertexArray        m_Data;
+    FaceMode           m_FaceCullingMode;
 };
 
 class Model
@@ -78,7 +85,6 @@ public:
 
     Model(Model&& other);
     Model& operator=(Model&& other);
-
     Model(const Model& other)            = delete;
     Model& operator=(const Model& other) = delete;
 
@@ -86,12 +92,11 @@ public:
 
     const std::vector<Mesh>& GetMeshes() const { return m_Meshes; }
 
-    void Draw(Shader& shader);
-    void NotUsingThisFunction() = delete;
+    void Draw(const Shader* shader) const;
 
 private:
     std::vector<Mesh>         m_Meshes;
-    std::vector<TextureCache> m_Textures;
+    std::vector<TextureCache> m_TextureCache;
 };
 
 } // namespace glfwd

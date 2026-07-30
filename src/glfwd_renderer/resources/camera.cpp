@@ -11,17 +11,25 @@ RenderCamera CameraBase::GetRenderCamera(int32_t viewport_width, int32_t viewpor
         .Position         = Position,
         .ClearColor       = ClearColor,
         .ViewMatrix       = CreateViewMatrix(),
-        .ProjectionMatrix = Projection == ProjectionMode::Perspective
-                                ? glm::perspective(glm::radians(FieldOfView),
-                                                   static_cast<float>(viewport_width) /
-                                                       static_cast<float>(viewport_height),
-                                                   NearClippingPlane,
-                                                   FarClippingPlane)
-                                : glm::ortho(0.0f,
-                                             static_cast<float>(viewport_width),
-                                             0.0f,
-                                             static_cast<float>(viewport_height)),
+        .ProjectionMatrix = CreateProjectionMatrix(viewport_width, viewport_height),
     };
+}
+
+glm::mat4 CameraBase::CreateProjectionMatrix(int32_t viewport_width, int32_t viewport_height) const
+{
+    if (Projection == ProjectionMode::Perspective)
+    {
+        return glm::perspective(glm::radians(FieldOfView),
+                                static_cast<float>(viewport_width) /
+                                    static_cast<float>(viewport_height),
+                                NearClippingPlane,
+                                FarClippingPlane);
+    }
+    else
+    {
+        return glm::ortho(
+            0.0f, static_cast<float>(viewport_width), 0.0f, static_cast<float>(viewport_height));
+    }
 }
 
 glm::mat4 TargetCamera::CreateViewMatrix() const

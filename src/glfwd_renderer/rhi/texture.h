@@ -16,6 +16,7 @@ enum class TextureType
     Tex3D,
     CubeMap,
 };
+
 constexpr std::array<std::string_view, 3> TEXTURE_TYPE_NAMES = {
     "Texture 2D",
     "Texture 3D",
@@ -64,8 +65,8 @@ struct TextureCreateInfo
     TextureFormat Format = TextureFormat::RGBA;
     TextureWrap   Wrap   = TextureWrap::Repeat;
 
-    TextureFilter MinFilter  = TextureFilter::Nearest;
-    TextureFilter MagFilter  = TextureFilter::Nearest;
+    TextureFilter MinFilter  = TextureFilter::Linear;
+    TextureFilter MagFilter  = TextureFilter::Linear;
     MipmapMode    Mipmap     = MipmapMode::Linear;
     uint32_t      Anisotropy = 1; // 1 => Disables, 0 => Max
 
@@ -88,7 +89,6 @@ public:
 
     Texture(Texture&& other);
     Texture& operator=(Texture&& other);
-
     Texture(const Texture& other)            = delete;
     Texture& operator=(const Texture& other) = delete;
 

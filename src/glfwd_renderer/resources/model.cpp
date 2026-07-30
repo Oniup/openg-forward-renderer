@@ -6,6 +6,8 @@
 #include <array>
 #include <numbers>
 
+#include "glfwd_renderer/rhi/context.h"
+
 namespace glfwd {
 
 std::array<VertexAttribute, 4> Vertex::GetVertexAttribute()
@@ -18,7 +20,8 @@ std::array<VertexAttribute, 4> Vertex::GetVertexAttribute()
     };
 }
 
-Mesh Mesh::GenerateCube(const BlinnPhongMaterial& material, glm::vec3 vertex_color)
+Mesh Mesh::GenerateCube(const BlinnPhongMaterial& material, glm::vec3 vertex_color,
+                        FaceMode face_culling_mode)
 {
     glm::vec3 color1 = vertex_color == glm::vec3(0.0f) ? glm::vec3(1.0f, 0.0f, 0.0f) : vertex_color;
     glm::vec3 color2 = vertex_color == glm::vec3(0.0f) ? glm::vec3(0.0f, 1.0f, 0.0f) : vertex_color;
@@ -85,10 +88,11 @@ Mesh Mesh::GenerateCube(const BlinnPhongMaterial& material, glm::vec3 vertex_col
     };
     // clang-format on
 
-    return Mesh(vertices, indices, material);
+    return Mesh(vertices, indices, material, false, PrimitiveMode::Triangles, face_culling_mode);
 }
 
-Mesh Mesh::GeneratePlane(const BlinnPhongMaterial& material, glm::vec3 vertex_color)
+Mesh Mesh::GeneratePlane(const BlinnPhongMaterial& material, glm::vec3 vertex_color,
+                         FaceMode face_culling_mode)
 {
     glm::vec3 color1 = vertex_color == glm::vec3(0.0f) ? glm::vec3(1.0f, 0.0f, 0.0f) : vertex_color;
     glm::vec3 color2 = vertex_color == glm::vec3(0.0f) ? glm::vec3(0.0f, 1.0f, 0.0f) : vertex_color;
@@ -108,11 +112,12 @@ Mesh Mesh::GeneratePlane(const BlinnPhongMaterial& material, glm::vec3 vertex_co
         // clang-format on
     };
 
-    return Mesh(vertices, indices, material);
+    return Mesh(vertices, indices, material, false, PrimitiveMode::Triangles, face_culling_mode);
 }
 
 Mesh Mesh::GenerateSphere(size_t revolutions_x, size_t revolutions_y,
-                          const BlinnPhongMaterial& material, glm::vec3 vertex_color)
+                          const BlinnPhongMaterial& material, glm::vec3 vertex_color,
+                          FaceMode face_culling_mode)
 {
     std::vector<Vertex>   vertices;
     std::vector<uint32_t> indices;
@@ -166,12 +171,13 @@ Mesh Mesh::GenerateSphere(size_t revolutions_x, size_t revolutions_y,
         }
     }
 
-    return Mesh(vertices, indices, material);
+    return Mesh(vertices, indices, material, false, PrimitiveMode::Triangles, face_culling_mode);
 }
 
 Mesh::Mesh(const std::vector<Vertex>& vertices, const BlinnPhongMaterial& material,
-           bool dynamic_draw, PrimitiveMode primitive_mode)
-    : m_Material(material)
+           bool dynamic_draw, PrimitiveMode primitive_mode, FaceMode face_culling_mode)
+    : m_Material(material),
+      m_FaceCullingMode(face_culling_mode)
 {
     Buffer array_buffer(Buffer::Array, dynamic_draw);
     array_buffer.PushData(vertices.data(), sizeof(Vertex), vertices.size());
@@ -180,8 +186,10 @@ Mesh::Mesh(const std::vector<Vertex>& vertices, const BlinnPhongMaterial& materi
 }
 
 Mesh::Mesh(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices,
-           const BlinnPhongMaterial& material, bool dynamic_draw, PrimitiveMode primitive_mode)
-    : m_Material(material)
+           const BlinnPhongMaterial& material, bool dynamic_draw, PrimitiveMode primitive_mode,
+           FaceMode face_culling_mode)
+    : m_Material(material),
+      m_FaceCullingMode(face_culling_mode)
 {
     Buffer array_buffer(Buffer::Array, dynamic_draw);
     Buffer element_buffer(Buffer::Element, dynamic_draw);
@@ -197,7 +205,8 @@ Mesh::Mesh(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& ind
 
 Mesh::Mesh(Mesh&& other)
     : m_Material(other.m_Material),
-      m_Data(std::move(other.m_Data))
+      m_Data(std::move(other.m_Data)),
+      m_FaceCullingMode(other.m_FaceCullingMode)
 {
 }
 
@@ -205,8 +214,9 @@ Mesh& Mesh::operator=(Mesh&& other)
 {
     if (this != &other)
     {
-        m_Material = other.m_Material;
-        m_Data     = std::move(other.m_Data);
+        m_Material        = other.m_Material;
+        m_Data            = std::move(other.m_Data);
+        m_FaceCullingMode = other.m_FaceCullingMode;
     }
     return *this;
 }
@@ -221,18 +231,59 @@ void Mesh::Draw() const
     m_Data.Draw();
 }
 
-void Mesh::Draw(PrimitiveMode primitive_mode) const
+void Mesh::Draw(PrimitiveMode override_primitive_mode) const
 {
-    m_Data.Draw(primitive_mode);
+    m_Data.Draw(override_primitive_mode);
 }
 
 Model::Model(std::string_view path)
 {
+    // TODO: ...
 }
 
 Model::Model(Mesh&& mesh)
 {
     m_Meshes.push_back(std::move(mesh));
+}
+
+Model::Model(Model&& other)
+    : m_Meshes(std::move(other.m_Meshes)),
+      m_TextureCache(std::move(other.m_TextureCache))
+{
+}
+
+Model& Model::operator=(Model&& other)
+{
+    if (this != &other)
+    {
+        m_Meshes       = std::move(other.m_Meshes);
+        m_TextureCache = std::move(other.m_TextureCache);
+    }
+    return *this;
+}
+
+bool Model::IsValid() const
+{
+    return !m_Meshes.empty();
+}
+
+void Model::Draw(const Shader* shader) const
+{
+    auto current_face_mode = FaceMode::Back;
+    for (const Mesh& mesh : m_Meshes)
+    {
+        if (mesh.GetFaceCullingMode() != current_face_mode)
+        {
+            glCullFace(OpenGLContext::ConvertFaceModeToOpenGL(mesh.GetFaceCullingMode()));
+            current_face_mode = mesh.GetFaceCullingMode();
+        }
+
+        mesh.GetMaterial().PushConstantsToShader(shader);
+        mesh.Draw();
+    }
+
+    if (current_face_mode != FaceMode::Back)
+        glCullFace(OpenGLContext::ConvertFaceModeToOpenGL(FaceMode::Back));
 }
 
 } // namespace glfwd

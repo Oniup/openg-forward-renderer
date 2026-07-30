@@ -7,6 +7,7 @@
 
 #include <string_view>
 
+#include "glfwd_core/core_context.h"
 #include "glfwd_core/resource_manager.h"
 #include "glfwd_core/time.h"
 #include "glfwd_core/window.h"
@@ -38,13 +39,15 @@ void Application::Initialize(const ApplicationCreateInfo& create_info)
 {
     // Initialize resource manager
     m_ResourceManager = new ResourceManager(create_info.AssetDirectory);
+    CoreContext::ProvideResourceManager(m_ResourceManager);
 
     // Initialize window and backend contexts
-    m_Renderer = new ForwardRenderer(m_ResourceManager, create_info.Renderer);
+    m_Renderer = new ForwardRenderer(create_info.Renderer);
     m_Window   = new Window(create_info.Window);
+    CoreContext::ProvideWindow(m_Window);
 
     // Initialize forward renderer and RHI context
-    m_Renderer->InitializeBackend(m_Window);
+    m_Renderer->InitializeBackend();
     m_Renderer->InitializeResources();
 
     OnInitialize();
@@ -53,23 +56,22 @@ void Application::Initialize(const ApplicationCreateInfo& create_info)
 void Application::Run()
 {
     Timestep  timestep;
-    SDL_Event event;
+    SDL_Event sdl_event;
     while (m_Window->IsOpen())
     {
-        while (SDL_PollEvent(&event))
+        while (SDL_PollEvent(&sdl_event))
         {
-            m_Window->HandleSDLEvents(event);
+            m_Window->HandleSDLEvents(sdl_event);
 
-            OnEvent(event);
+            OnEvent(sdl_event);
         }
 
         timestep.CalculateDeltaTime();
 
         OnUpdate(timestep);
-        OnLateUpdate(timestep);
         SubmitToRenderQueue(m_Renderer->GetRenderQueue());
 
-        m_Renderer->SwapBuffers();
+        m_Renderer->Render();
     }
 }
 

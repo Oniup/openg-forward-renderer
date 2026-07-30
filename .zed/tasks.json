@@ -32,6 +32,20 @@
     "allow_concurrent_runs": false,
   },
   {
+    "label": "CMake Configure MSVC (Debug)",
+    "command": "cmake",
+    "args": ["-B", "build", "-G", "Ninja", "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON", "-DCMAKE_BUILD_TYPE=Debug"],
+    "use_new_terminal": false,
+    "allow_concurrent_runs": false,
+  },
+  {
+    "label": "CMake Configure MSVC (Release)",
+    "command": "cmake",
+    "args": ["-B", "build", "-G", "Ninja", "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON", "-DCMAKE_BUILD_TYPE=Release"],
+    "use_new_terminal": false,
+    "allow_concurrent_runs": false,
+  },
+  {
     "label": "CMake: Build",
     "command": "cmake",
     "args": ["--build", "build"],

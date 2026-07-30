@@ -13,7 +13,6 @@ namespace intern {
 }
 
 class Shader;
-class ResourceManager;
 
 struct BlinnPhongMaterial
 {
@@ -28,7 +27,7 @@ struct BlinnPhongMaterial
         ColorAttribute(glm::vec3 color, const ResourceHandle<Texture>& texture);
     };
 
-    static void SetupShaderMaterial(const Shader* shader, bool bind_shader = false);
+    static void SetupShaderMaterial(const Shader* shader);
 
     ColorAttribute Diffuse;
     ColorAttribute Specular;
@@ -38,7 +37,7 @@ struct BlinnPhongMaterial
     float     Shininess    = 1.0f;
 
     bool IsValid() const;
-    void PushConstantsToShader(const Shader* shader, ResourceManager* resources) const;
+    void PushConstantsToShader(const Shader* shader) const;
 };
 
 } // namespace glfwd

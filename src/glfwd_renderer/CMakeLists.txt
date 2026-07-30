@@ -1,27 +1,30 @@
 # Renderer and OpenGL Abstraction Layer
 # ==============================================================================
 set(SRC
-        ./resources/camera.h
-        ./resources/camera.cpp
-        ./resources/material.h
-        ./resources/material.cpp
-        ./resources/model.h
-        ./resources/model.cpp
+        resources/camera.h
+        resources/camera.cpp
+        resources/material.h
+        resources/material.cpp
+        resources/model.h
+        resources/model.cpp
 
-        ./rhi/buffer.h
-        ./rhi/buffer.cpp
-        ./rhi/context.h
-        ./rhi/context.cpp
-        ./rhi/shader.h
-        ./rhi/shader.cpp
-        ./rhi/texture.h
-        ./rhi/texture.cpp
+        rhi/buffer.h
+        rhi/buffer.cpp
+        rhi/context.h
+        rhi/context.cpp
+        rhi/framebuffer.h
+        rhi/framebuffer.cpp
+        rhi/shader.h
+        rhi/shader.cpp
+        rhi/texture.h
+        rhi/texture.cpp
 
-        ./create_info.h
-        ./render_queue.h
-        ./draw_mode.h
-        ./forward_renderer.h
-        ./forward_renderer.cpp
+        create_info.h
+        draw_mode.h
+        forward_renderer.h
+        forward_renderer.cpp
+        render_queue.h
+        render_queue.cpp
 )
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${SRC})
 

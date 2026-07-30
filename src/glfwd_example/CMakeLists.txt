@@ -1,7 +1,13 @@
 set(SRC
-    ./game.h
-    ./game.cpp
-    ./main.cpp
+        actors/camera_controller.h
+        actors/camera_controller.cpp
+        actors/cube.h
+        actors/cube.cpp
+
+        actor.h
+        game.h
+        game.cpp
+        main.cpp
 )
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SRC})
 

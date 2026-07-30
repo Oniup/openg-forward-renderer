@@ -11,10 +11,9 @@ layout(location = 3) in vec2 a_TexCoord;
 //     mat4 u_View;
 // };
 
-uniform mat4 u_View;
-uniform mat4 u_Projection;
+uniform mat4 u_ProjectionView;
 uniform mat4 u_Model;
-// uniform mat3 u_InverseTransposeModel;
+uniform mat3 u_TransposeInverseModel;
 
 out VS_OUT
 {
@@ -30,11 +29,9 @@ vs_out;
 void main()
 {
     vec4 position = vec4(a_Position, 1.0);
-    // gl_Position   = u_Model * position;
-    gl_Position = u_Projection * u_View * u_Model * position;
+    gl_Position   = u_ProjectionView * u_Model * position;
 
-    vs_out.Normal = a_Normal;
-    // vs_out.Normal       = u_InverseTransposeModel * a_Normal;
+    vs_out.Normal       = u_TransposeInverseModel * a_Normal;
     vs_out.Color        = a_Color;
     vs_out.TexCoord     = a_TexCoord;
     vs_out.FragPosition = vec3(u_Model * position);

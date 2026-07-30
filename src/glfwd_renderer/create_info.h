@@ -12,6 +12,7 @@ enum class SwapInterval
 struct RendererCreateInfo
 {
     SwapInterval SwapIntervalMode                = SwapInterval::AdaptiveVSync;
+    bool         EnableMSAA                      = true;
     bool         EnableVSync                     = true;
     bool         EnableHardwareDebugCallback     = true;
     bool         EnableDepthForScreenFramebuffer = true; // TODO: default to false

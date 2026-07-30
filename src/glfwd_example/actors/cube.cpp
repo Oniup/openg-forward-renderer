@@ -1,0 +1,41 @@
+﻿#include "glfwd_example/actors/cube.h"
+
+#include "glfwd_core/core_context.h"
+
+namespace glfwd_example {
+
+void Cube::OnInitialize()
+{
+    glfwd::ResourceManager* resources = glfwd::CoreContext::GetResourceManager();
+
+    // Get texture
+    m_ShaderHandle = resources->QueryHandle<glfwd::Shader>("Basic Blinn-Phong");
+    glfwd::BlinnPhongMaterial::SetupShaderMaterial(resources->QueryResource(m_ShaderHandle));
+
+    // Create model texture
+    glfwd::TextureCreateInfo texture_create_info{
+        .MinFilter  = glfwd::TextureFilter::Linear,
+        .MagFilter  = glfwd::TextureFilter::Linear,
+        .Mipmap     = glfwd::MipmapMode::Linear,
+        .Anisotropy = 16,
+    };
+    glfwd::BlinnPhongMaterial material{
+        .Diffuse = resources->PushResource(
+            "Container Color",
+            glfwd::Texture(resources->GetAssetPath("textures/container/color.png"),
+                           texture_create_info)),
+        .Specular = resources->PushResource(
+            "Container Specular",
+            glfwd::Texture(resources->GetAssetPath("textures/container/specular.png"),
+                           texture_create_info)),
+    };
+    m_ModelHandle =
+        resources->PushResource("Container", glfwd::Model(glfwd::Mesh::GenerateCube(material)));
+}
+
+void Cube::SubmitToRenderQueue(glfwd::RenderQueue* render_queue) const
+{
+    render_queue->SubmitModel(m_ShaderHandle, GetTransform().CreateModelMatrix(), m_ModelHandle);
+}
+
+} // namespace glfwd_example

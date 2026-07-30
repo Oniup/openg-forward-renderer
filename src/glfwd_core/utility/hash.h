@@ -15,7 +15,7 @@ namespace intern {
     struct string_hash
     {
         using is_transparent = void; // Reqired for heterogeneous lookups
-        using is_avalanching = void; // Tells ankerl the has is high quality
+        using is_avalanching = void; // Says the hash is high quality
 
         [[nodiscard]] uint64_t operator()(std::string_view str) const noexcept
         {

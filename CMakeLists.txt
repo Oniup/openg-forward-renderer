@@ -29,7 +29,7 @@ endif ()
 
 # Library
 # ==============================================================================
-add_subdirectory(thirdparty SYSTEM) # Thirdparty
+add_subdirectory(thirdparty SYSTEM)
 
 set(CMAKE_FOLDER "glfwd/shaders")
 file(GLOB_RECURSE SHADER_FILES
@@ -39,6 +39,10 @@ file(GLOB_RECURSE SHADER_FILES
 )
 
 add_custom_target(glfwd_shaders SOURCES ${SHADER_FILES})
+
+if (${RIDER_BUILD})
+    message("This in fact is rider")
+endif ()
 
 # Modules
 set(CMAKE_FOLDER "glfwd")
