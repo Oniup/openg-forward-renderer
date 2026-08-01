@@ -5,6 +5,8 @@
 
 #include "glfwd_core/core_context.h"
 #include "glfwd_core/time.h"
+#include "glfwd_core/utility/error.h"
+#include "glfwd_core/window.h"
 
 namespace glfwd_example {
 

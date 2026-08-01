@@ -9,6 +9,11 @@
 #include "glfwd_renderer/resources/material.h"
 #include "glfwd_renderer/rhi/buffer.h"
 
+struct aiNode;
+struct aiScene;
+struct aiMesh;
+struct aiMaterial;
+
 namespace glfwd {
 
 // TODO: Support instancing vertex array attributes
@@ -70,18 +75,37 @@ private:
     FaceMode           m_FaceCullingMode;
 };
 
+struct ModelLoadCreateInfo
+{
+    enum class QualityPreset
+    {
+        Fast,
+        Quality,
+        MaxQuality,
+    };
+
+    std::string_view Path               = "";
+    QualityPreset    MeshLoadingQuality = QualityPreset::Fast;
+    bool             FlipUVs            = true;
+    bool             GenerateSmoothMesh = true;
+};
+
 class Model
 {
-    struct TextureCache
+    struct TextureCacheEntry
     {
         uint64_t                PathID;
         ResourceHandle<Texture> TextureHandle;
     };
 
 public:
+    static std::vector<std::tuple<std::string, Model>> LoadSplitModel(
+        const ModelLoadCreateInfo& info, size_t split_layer_depth = 1);
+
     Model() = default;
-    Model(std::string_view path);
+    Model(const ModelLoadCreateInfo& info);
     Model(Mesh&& mesh);
+    Model(std::vector<Mesh>&& meshes);
 
     Model(Model&& other);
     Model& operator=(Model&& other);
@@ -95,8 +119,15 @@ public:
     void Draw(const Shader* shader) const;
 
 private:
-    std::vector<Mesh>         m_Meshes;
-    std::vector<TextureCache> m_TextureCache;
+    void PushTextureToCache(std::vector<TextureCacheEntry>& texture_cache,
+                            const ResourceHandle<Texture>&  texture_handle,
+                            uint64_t                        path_id = 0) const;
+
+    void LoadFromPath(const ModelLoadCreateInfo& info);
+    void ProcessNode(const aiNode* node, const aiScene* scene, uint32_t flags);
+    Mesh ProcessMesh(const aiMesh* mesh, const aiScene* scene, uint32_t flags);
+
+    std::vector<Mesh> m_Meshes;
 };
 
 } // namespace glfwd

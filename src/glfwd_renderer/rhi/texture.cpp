@@ -10,65 +10,97 @@
 
 #include <array>
 
+#include "glfwd_core/core_context.h"
 #include "glfwd_core/utility/error.h"
+#include "glfwd_renderer/forward_renderer.h"
 #include "glfwd_renderer/rhi/context.h"
 
 namespace glfwd {
+
+bool TextureFilterOptions::operator==(const TextureFilterOptions& other) const
+{
+    return MinFilter == other.MinFilter && MagFilter == other.MagFilter && Mipmap == other.Mipmap &&
+           Anisotropy == other.Anisotropy;
+}
+
+bool TextureFilterOptions::operator!=(const TextureFilterOptions& other) const
+{
+    return !(*this == other);
+}
+
+void TextureFilterOptions::AssignDefaultValues()
+{
+    const TextureFilterOptions& default_val = CoreContext::GetRenderer()->GetDefaultTextureFilter();
+
+    MinFilter = MinFilter == TextureFilter::Default ? default_val.MinFilter : MinFilter;
+    MagFilter = MagFilter == TextureFilter::Default ? default_val.MagFilter : MagFilter;
+    Mipmap    = Mipmap == MipmapMode::Default ? default_val.Mipmap : Mipmap;
+    Anisotropy =
+        Anisotropy == std::numeric_limits<uint32_t>::max() ? default_val.Anisotropy : Anisotropy;
+}
 
 Texture::Texture(const TextureCreateInfo& info)
     : m_Type(info.Type),
       m_Width(info.Width),
       m_Height(info.Height),
-      m_Depth(info.Depth)
+      m_Depth(info.Depth),
+      m_Sample(info.Sample),
+      m_FilterOptions(info.Filter)
 {
+    m_FilterOptions.AssignDefaultValues();
     LoadOpenGLTexture(nullptr, info);
 }
 
 Texture::Texture(const uint8_t* buffer, size_t buffer_size, const TextureCreateInfo& info)
-    : m_Type(info.Type)
+    : m_Type(info.Type),
+      m_Sample(info.Sample),
+      m_FilterOptions(info.Filter)
 {
+    m_FilterOptions.AssignDefaultValues();
+
     if (buffer != nullptr && buffer_size > 0)
     {
         SDL_IOStream* stream = SDL_IOFromConstMem(buffer, buffer_size);
         if (!stream)
         {
             GLFWD_ERROR("Failed to load embedded {} texture buffer as a stream: {}",
-                        TEXTURE_TYPE_NAMES[static_cast<int>(info.Type)],
+                        TextureTypeNames[static_cast<int>(info.Type)],
                         SDL_GetError());
             return;
         }
 
-        SDL_Surface* image_surface = IMG_Load_IO(stream, 1);
+        SDL_Surface* image_surface = IMG_Load_IO(stream, true);
         if (!image_surface)
         {
             GLFWD_ERROR("Failed to load embedded {} texture buffer: {}",
-                        TEXTURE_TYPE_NAMES[static_cast<int>(info.Type)],
+                        TextureTypeNames[static_cast<int>(info.Type)],
                         SDL_GetError());
-            SDL_CloseIO(stream);
         }
-        SDL_CloseIO(stream);
 
         if (SetSizeFromSurface(image_surface, info))
         {
             if (LoadOpenGLTexture(image_surface, info))
             {
                 GLFWD_INFO("Initialized embedded {} ({}, {})",
-                           TEXTURE_TYPE_NAMES[static_cast<int>(info.Type)],
+                           TextureTypeNames[static_cast<int>(info.Type)],
                            m_Width,
                            m_Height);
             }
         }
         else
             GLFWD_ERROR("Failed to load embedded {} texture",
-                        TEXTURE_TYPE_NAMES[static_cast<int>(info.Type)]);
+                        TextureTypeNames[static_cast<int>(info.Type)]);
         SDL_DestroySurface(image_surface);
     }
 }
 
 Texture::Texture(std::string_view path, const TextureCreateInfo& info)
-    : m_Type(info.Type)
+    : m_Type(info.Type),
+      m_Sample(info.Sample),
+      m_FilterOptions(info.Filter)
 {
     GLFWD_ASSERT_STRING_VIEW_NULL_TERMINATED(path);
+    m_FilterOptions.AssignDefaultValues();
 
     SDL_Surface* image_surface = IMG_Load(path.data());
     if (!image_surface)
@@ -82,7 +114,7 @@ Texture::Texture(std::string_view path, const TextureCreateInfo& info)
         if (LoadOpenGLTexture(image_surface, info))
         {
             GLFWD_INFO("Initialized {} ({}, {}) from path {}",
-                       TEXTURE_TYPE_NAMES[static_cast<int>(info.Type)],
+                       TextureTypeNames[static_cast<int>(info.Type)],
                        m_Width,
                        m_Height,
                        path);
@@ -91,22 +123,10 @@ Texture::Texture(std::string_view path, const TextureCreateInfo& info)
     else
     {
         GLFWD_ERROR("Failed to load {} texture from path {}",
-                    TEXTURE_TYPE_NAMES[static_cast<int>(info.Type)],
+                    TextureTypeNames[static_cast<int>(info.Type)],
                     path);
     }
     SDL_DestroySurface(image_surface);
-}
-
-Texture::Texture(SDL_Surface* surface, const TextureCreateInfo& info)
-    : m_Type(info.Type)
-{
-    if (!surface)
-    {
-        m_Width  = info.Width;
-        m_Height = info.Height;
-        m_Depth  = info.Depth;
-        LoadOpenGLTexture(nullptr, info);
-    }
 }
 
 Texture::~Texture()
@@ -156,6 +176,12 @@ bool Texture::IsValid() const
     return m_ID != 0;
 }
 
+void Texture::SetFilterOptions(TextureFilterOptions filter)
+{
+    m_FilterOptions = filter;
+    SetOpenGLFilterOptions();
+}
+
 void Texture::LoadFromSurface(SDL_Surface* image_surface, const TextureCreateInfo& info)
 {
     SDL_PixelFormat pixel_format;
@@ -172,6 +198,7 @@ void Texture::LoadFromSurface(SDL_Surface* image_surface, const TextureCreateInf
                     "create texture but ignore image data.");
         LoadOpenGLTexture(nullptr, info);
         return;
+    default: return;
     }
 
     if (info.FlipVertically)
@@ -263,29 +290,18 @@ bool Texture::LoadOpenGLTexture(const SDL_Surface* surface, const TextureCreateI
     if (info.Type == TextureType::Tex3D)
         glTexParameteri(type, GL_TEXTURE_WRAP_R, wrapping);
 
-    int32_t min_filter, mag_filter;
-    OpenGLContext::ConvertTextureFiltersToOpenGL(
-        info.MinFilter, info.MagFilter, info.Mipmap, min_filter, mag_filter);
-    glTexParameteri(type, GL_TEXTURE_MIN_FILTER, min_filter);
-    glTexParameteri(type, GL_TEXTURE_MAG_FILTER, mag_filter);
-
-    if (info.Anisotropy != 1)
-    {
-        glTexParameterf(type,
-                        GL_TEXTURE_MAX_ANISOTROPY,
-                        static_cast<float>(info.Anisotropy == 0 ? OpenGLContext::GetMaxAnisotropy()
-                                                                : info.Anisotropy));
-    }
+    SetOpenGLFilterOptions();
 
     // Enable mipmapping
-    if (info.Mipmap != MipmapMode::None)
+    if (info.Filter.Mipmap != MipmapMode::None)
         glGenerateMipmap(type);
 
     return true;
 }
 
-bool Texture::LoadOpenGLCubeMapFromSurface(const SDL_Surface* surface, const TextureCreateInfo& info,
-                                           int32_t base_format, int32_t output_format) const
+bool Texture::LoadOpenGLCubeMapFromSurface(const SDL_Surface*       surface,
+                                           const TextureCreateInfo& info, int32_t base_format,
+                                           int32_t output_format) const
 {
     if (!surface)
     {
@@ -334,6 +350,29 @@ bool Texture::LoadOpenGLCubeMapFromSurface(const SDL_Surface* surface, const Tex
     glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0);
     glPixelStorei(GL_UNPACK_SKIP_ROWS, 0);
     return true;
+}
+
+// ReSharper disable once CppMemberFunctionMayBeConst
+void Texture::SetOpenGLFilterOptions()
+{
+    int32_t min_filter, mag_filter;
+    OpenGLContext::ConvertTextureFiltersToOpenGL(m_FilterOptions.MinFilter,
+                                                 m_FilterOptions.MagFilter,
+                                                 m_FilterOptions.Mipmap,
+                                                 min_filter,
+                                                 mag_filter);
+
+    uint32_t type = OpenGLContext::ConvertTextureTypeToOpenGL(m_Type);
+    glTexParameteri(type, GL_TEXTURE_MIN_FILTER, min_filter);
+    glTexParameteri(type, GL_TEXTURE_MAG_FILTER, mag_filter);
+
+    if (m_FilterOptions.Anisotropy != TextureFilterOptions::Anisotropy_Disabled)
+    {
+        int32_t anisotropy = m_FilterOptions.Anisotropy == TextureFilterOptions::Anisotropy_Max
+                                 ? OpenGLContext::GetMaxAnisotropy()
+                                 : m_FilterOptions.Anisotropy;
+        glTexParameterf(type, GL_TEXTURE_MAX_ANISOTROPY, static_cast<float>(anisotropy));
+    }
 }
 
 bool Texture::SetSizeFromSurface(const SDL_Surface* surface, const TextureCreateInfo& info)

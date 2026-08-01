@@ -18,7 +18,7 @@ class IResourcePool
 {
 public:
     static constexpr uint16_t InvalidIndex = 0xFFFF;
-    virtual ~IResourcePool() = default;
+    virtual ~IResourcePool()               = default;
 
 protected:
     std::vector<uint16_t>    m_Generations; // Number of times the slot has been reused
@@ -31,7 +31,7 @@ class ResourcePool : public IResourcePool
 {
 public:
     using PFN_ExecutePerElement = std::function<bool(T* element)>;
-    
+
     ResourcePool()           = default;
     ~ResourcePool() override = default;
 
@@ -159,7 +159,7 @@ private:
         m_Generations[index] += 1; // Increment resource
         m_FreeSlots.push_back(index);
     }
-    
+
     std::vector<T> m_Data; // Packed resource data
 };
 
@@ -172,6 +172,9 @@ concept ResourceHasValidMethod = requires(T resource) {
 class ResourceManager
 {
 public:
+    static constexpr bool RemoveItemFromPool = false;
+    static constexpr bool KeepItemInPool     = true;
+
     ResourceManager(std::string_view path)
         : m_AssetDirectory(path)
     {
@@ -291,6 +294,8 @@ public:
         return pool->QueryHandle(name);
     }
 
+    /// Used to iterate over element within pool and execute. Lambda should return false to
+    /// remove element from pool, otherwise return true to leave.
     template <typename T>
     void ExecuteOverPool(ResourcePool<T>::PFN_ExecutePerElement pfn_execute)
     {

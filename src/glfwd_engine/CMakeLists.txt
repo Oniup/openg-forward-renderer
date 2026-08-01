@@ -21,7 +21,7 @@ PUBLIC
     glfwd::renderer
 
     SDL3::SDL3 # TODO: Remove later
-    glad       # TODO: Remove Later
+    glad::glad # TODO: Remove Later
 )
 
 # Alias for external linking

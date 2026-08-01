@@ -13,7 +13,7 @@
 
 namespace glfwd {
 
-ForwardRenderer::ForwardRenderer(const RendererCreateInfo& info)
+ForwardRenderer::ForwardRenderer(const RendererOptions& info)
     : m_Context(new OpenGLContext(info)), // SDL and OpenGL Attributes
       m_Options(info)
 {
@@ -67,10 +67,31 @@ void ForwardRenderer::InitializeResources() const
             Texture(CoreContext::GetResourceManager()->GetAssetPath("textures/default.png"),
                     TextureCreateInfo{
                         // can afford terrible mipmaps as the texture is only white
-                        .Mipmap = MipmapMode::Nearest,
+                        .Filter = {.Mipmap = MipmapMode::Nearest},
                     }));
 
     intern::InitializeMaterialDefaultTextures(default_material_white);
+}
+
+const TextureFilterOptions& ForwardRenderer::GetDefaultTextureFilter() const
+{
+    return m_Options.DefaultTextureFilter;
+}
+
+void ForwardRenderer::SetDefaultTextureFilter(const TextureFilterOptions& filter)
+{
+    CoreContext::GetResourceManager()->ExecuteOverPool<Texture>(
+        [&](Texture* texture) -> bool
+        {
+            if (texture->GetFilterOptions() == m_Options.DefaultTextureFilter)
+            {
+                texture->Bind();
+                texture->SetFilterOptions(filter);
+            }
+            return ResourceManager::KeepItemInPool;
+        });
+
+    m_Options.DefaultTextureFilter = filter;
 }
 
 void ForwardRenderer::Render()

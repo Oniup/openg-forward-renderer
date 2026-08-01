@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-#include "glfwd_renderer/create_info.h"
+#include "glfwd_renderer/renderer_options.h"
 
 typedef struct SDL_GLContextState* SDL_GLContext;
 
@@ -42,7 +42,7 @@ public:
     static int32_t GetMaxMSAASamples();
     static int32_t GetMaxAnisotropy();
 
-    OpenGLContext(const RendererCreateInfo& info);
+    OpenGLContext(const RendererOptions& info);
     ~OpenGLContext();
 
     void InitializeBackend();

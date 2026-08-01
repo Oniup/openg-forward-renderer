@@ -44,29 +44,49 @@ add_subdirectory(fmt)
 # ----------------------------------------------------------------------------------------------------------------------
 add_subdirectory(unordered_dense)
 
-# # Assimp
-# # ----------------------------------------------------------------------------------------------------------------------
-# if (WIN32 AND MSVC)
-#     # Disable building again, SDL_image already does so. To avoid a circular dependency, must disable
-#     # Assimp from building zlib and feed target from SDL_image to Assimp
-#     set(ASSIMP_BUILD_ZLIB OFF CACHE BOOL "" FORCE)
-#     set(ZLIB_LIBRARY zlibstatic CACHE STRING "" FORCE)
-#     set(ZLIB_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/SDL_image/external/zlib" CACHE PATH "" FORCE)
-# endif()
-#
-# # Optimize build targets
-# set(ASSIMP_BUILD_ALL_IMPORTERS_BY_DEFAULT OFF CACHE BOOL "Disable all importers" FORCE)
-# set(ASSIMP_BUILD_ALL_EXPORTERS_BY_DEFAULT OFF CACHE BOOL "Disable all exporters" FORCE)
-# set(ASSIMP_BUILD_TESTS OFF CACHE BOOL "Disable tests" FORCE)
-# set(ASSIMP_INSTALL OFF CACHE BOOL "Disable installation" FORCE)
-# set(ASSIMP_BUILD_ASSIMP_TOOLS OFF CACHE BOOL "Disable CLI tools" FORCE)
-# # Explicit model support
-# set(ASSIMP_BUILD_FBX_IMPORTER ON CACHE BOOL "Enable FBX" FORCE)
-# set(ASSIMP_BUILD_OBJ_IMPORTER ON CACHE BOOL "Enable OBJ" FORCE)
+# Assimp
+# ----------------------------------------------------------------------------------------------------------------------
+if (WIN32 AND MSVC)
+    # Disable building again, SDL_image already does so. To avoid a circular dependency, must disable
+    # Assimp from building zlib and feed target from SDL_image to Assimp
+    set(ASSIMP_BUILD_ZLIB OFF CACHE BOOL "" FORCE)
+    set(ZLIB_LIBRARY zlibstatic CACHE STRING "" FORCE)
+    set(ZLIB_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/SDL_image/external/zlib" CACHE PATH "" FORCE)
+endif()
+
+# Optimize build targets
+set(ASSIMP_BUILD_ALL_IMPORTERS_BY_DEFAULT OFF CACHE BOOL "Disable all importers" FORCE)
+set(ASSIMP_BUILD_ALL_EXPORTERS_BY_DEFAULT OFF CACHE BOOL "Disable all exporters" FORCE)
+set(ASSIMP_BUILD_TESTS OFF CACHE BOOL "Disable tests" FORCE)
+set(ASSIMP_INSTALL OFF CACHE BOOL "Disable installation" FORCE)
+set(ASSIMP_BUILD_ASSIMP_TOOLS OFF CACHE BOOL "Disable CLI tools" FORCE)
+# Explicit model support
+set(ASSIMP_BUILD_FBX_IMPORTER ON CACHE BOOL "Enable FBX" FORCE)
+set(ASSIMP_BUILD_OBJ_IMPORTER ON CACHE BOOL "Enable OBJ" FORCE)
+# Re-add back when implementing PBR
 # set(ASSIMP_BUILD_GLTF_IMPORTER ON CACHE BOOL "Enable GLTF and GLB" FORCE)
-#
-# set(ASSIMP_WARNINGS_AS_ERRORS OFF CACHE BOOL "Treat all warnings as errors." FORCE)
-# add_subdirectory(assimp)
+set(ASSIMP_WARNINGS_AS_ERRORS OFF CACHE BOOL "Treat all warnings as errors." FORCE)
+
+# Optimize assimp in debug mode
+set(ORIG_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
+set(ORIG_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
+if(MSVC)
+    # /O2 maximises speed. /RTC1 is incompatible with /O2 and must be stripped.
+    string(REPLACE "/Od" "/O2" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
+    string(REPLACE "/RTC1" "" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
+    string(REPLACE "/Od" "/O2" CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
+    string(REPLACE "/RTC1" "" CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
+else()
+    # -O2 maximises speed for GCC/Clang.
+    string(REPLACE "-O0" "-O2" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
+    string(REPLACE "-O0" "-O2" CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
+endif()
+
+add_subdirectory(assimp)
+
+# Restore unoptimized flags
+set(CMAKE_CXX_FLAGS_DEBUG "${ORIG_CXX_FLAGS_DEBUG}")
+set(CMAKE_C_FLAGS_DEBUG "${ORIG_C_FLAGS_DEBUG}")
 #
 # # ImGUI
 # # ----------------------------------------------------------------------------------------------------------------------

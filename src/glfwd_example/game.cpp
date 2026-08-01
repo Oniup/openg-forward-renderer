@@ -32,7 +32,7 @@ void Game::OnEvent(const SDL_Event& event)
                 [](glfwd::Shader* shader) -> bool
                 {
                     shader->ReloadShader();
-                    return true;
+                    return glfwd::ResourceManager::KeepItemInPool;
                 });
         }
     }

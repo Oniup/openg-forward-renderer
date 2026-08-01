@@ -1,6 +1,7 @@
 ﻿#include "glfwd_example/actors/cube.h"
 
 #include "glfwd_core/core_context.h"
+#include "glfwd_core/resource_manager.h"
 
 namespace glfwd_example {
 
@@ -13,21 +14,13 @@ void Cube::OnInitialize()
     glfwd::BlinnPhongMaterial::SetupShaderMaterial(resources->QueryResource(m_ShaderHandle));
 
     // Create model texture
-    glfwd::TextureCreateInfo texture_create_info{
-        .MinFilter  = glfwd::TextureFilter::Linear,
-        .MagFilter  = glfwd::TextureFilter::Linear,
-        .Mipmap     = glfwd::MipmapMode::Linear,
-        .Anisotropy = 16,
-    };
     glfwd::BlinnPhongMaterial material{
         .Diffuse = resources->PushResource(
             "Container Color",
-            glfwd::Texture(resources->GetAssetPath("textures/container/color.png"),
-                           texture_create_info)),
+            glfwd::Texture(resources->GetAssetPath("textures/container/color.png"))),
         .Specular = resources->PushResource(
             "Container Specular",
-            glfwd::Texture(resources->GetAssetPath("textures/container/specular.png"),
-                           texture_create_info)),
+            glfwd::Texture(resources->GetAssetPath("textures/container/specular.png"))),
     };
     m_ModelHandle =
         resources->PushResource("Container", glfwd::Model(glfwd::Mesh::GenerateCube(material)));

@@ -6,6 +6,10 @@
 #include <array>
 #include <numbers>
 
+#include "assimp/Importer.hpp"
+#include "assimp/postprocess.h"
+#include "assimp/scene.h"
+#include "glfwd_core/utility/error.h"
 #include "glfwd_renderer/rhi/context.h"
 
 namespace glfwd {
@@ -218,6 +222,7 @@ Mesh& Mesh::operator=(Mesh&& other)
         m_Data            = std::move(other.m_Data);
         m_FaceCullingMode = other.m_FaceCullingMode;
     }
+
     return *this;
 }
 
@@ -236,7 +241,13 @@ void Mesh::Draw(PrimitiveMode override_primitive_mode) const
     m_Data.Draw(override_primitive_mode);
 }
 
-Model::Model(std::string_view path)
+std::vector<std::tuple<std::string, Model>> Model::LoadSplitModel(const ModelLoadCreateInfo& info,
+                                                                  size_t split_layer_depth)
+{
+    return {};
+}
+
+Model::Model(const ModelLoadCreateInfo& info)
 {
     // TODO: ...
 }
@@ -246,9 +257,13 @@ Model::Model(Mesh&& mesh)
     m_Meshes.push_back(std::move(mesh));
 }
 
+Model::Model(std::vector<Mesh>&& meshes)
+    : m_Meshes(std::move(meshes))
+{
+}
+
 Model::Model(Model&& other)
-    : m_Meshes(std::move(other.m_Meshes)),
-      m_TextureCache(std::move(other.m_TextureCache))
+    : m_Meshes(std::move(other.m_Meshes))
 {
 }
 
@@ -256,9 +271,9 @@ Model& Model::operator=(Model&& other)
 {
     if (this != &other)
     {
-        m_Meshes       = std::move(other.m_Meshes);
-        m_TextureCache = std::move(other.m_TextureCache);
+        m_Meshes = std::move(other.m_Meshes);
     }
+
     return *this;
 }
 
@@ -284,6 +299,57 @@ void Model::Draw(const Shader* shader) const
 
     if (current_face_mode != FaceMode::Back)
         glCullFace(OpenGLContext::ConvertFaceModeToOpenGL(FaceMode::Back));
+}
+
+void Model::PushTextureToCache(std::vector<TextureCacheEntry>& texture_cache,
+                               const ResourceHandle<Texture>&  texture_handle,
+                               uint64_t                        path_id) const
+{
+    // Don't add if already exists within cache so there is no duplicates
+    for (const TextureCacheEntry& entry : texture_cache)
+    {
+        if (entry.TextureHandle == texture_handle && entry.PathID == path_id)
+            return;
+    }
+
+    texture_cache.push_back(TextureCacheEntry{
+        .PathID        = path_id,
+        .TextureHandle = texture_handle,
+    });
+}
+void Model::LoadFromPath(const ModelLoadCreateInfo& info)
+{
+    GLFWD_ASSERT_STRING_VIEW_NULL_TERMINATED(info.Path);
+
+    uint32_t post_processing = 0;
+    switch (info.MeshLoadingQuality)
+    {
+    case ModelLoadCreateInfo::QualityPreset::Fast:
+        post_processing = aiProcessPreset_TargetRealtime_Fast;
+        break;
+    case ModelLoadCreateInfo::QualityPreset::Quality:
+        post_processing = aiProcessPreset_TargetRealtime_Quality;
+        break;
+    case ModelLoadCreateInfo::QualityPreset::MaxQuality:
+        post_processing = aiProcessPreset_TargetRealtime_MaxQuality;
+        break;
+    }
+
+    post_processing |= info.FlipUVs ? aiProcess_FlipUVs : 0;
+    if (info.GenerateSmoothMesh)
+    {
+        post_processing &= ~aiProcess_GenNormals;
+        post_processing |= aiProcess_GenSmoothNormals;
+    }
+
+    Assimp::Importer importer;
+    const aiScene*   scene = importer.ReadFile(info.Path.data(), post_processing);
+
+    if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
+    {
+        GLFWD_ERROR("Failed to load model from path: {}: {}", info.Path, importer.GetErrorString());
+        return;
+    }
 }
 
 } // namespace glfwd

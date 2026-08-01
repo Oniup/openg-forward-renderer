@@ -7,8 +7,8 @@
 #include "glfwd_core/core_context.h"
 #include "glfwd_core/utility/error.h"
 #include "glfwd_core/window.h"
-#include "glfwd_renderer/create_info.h"
 #include "glfwd_renderer/draw_mode.h"
+#include "glfwd_renderer/renderer_options.h"
 #include "glfwd_renderer/rhi/framebuffer.h"
 #include "glfwd_renderer/rhi/texture.h"
 
@@ -54,7 +54,7 @@ void GLAPIENTRY glDebugOutputCallback(GLenum source, GLenum type, unsigned int i
 
     switch (severity)
     {
-    case GL_DEBUG_SEVERITY_HIGH:         GLFWD_FATAL(EFMT, id, source_str, type_str, message); 
+    case GL_DEBUG_SEVERITY_HIGH:         GLFWD_FATAL(EFMT, id, source_str, type_str, message);
     case GL_DEBUG_SEVERITY_MEDIUM:       GLFWD_ERROR(EFMT, id, source_str, type_str, message); break;
     case GL_DEBUG_SEVERITY_LOW:          GLFWD_WARN(EFMT, id, source_str, type_str, message); break;
     case GL_DEBUG_SEVERITY_NOTIFICATION: GLFWD_INFO(EFMT, id, source_str, type_str, message); break;
@@ -186,11 +186,12 @@ int32_t OpenGLContext::GetMaxAnisotropy()
     return s_Instance->m_MaxAnisotropy;
 }
 
-OpenGLContext::OpenGLContext(const RendererCreateInfo& info)
+OpenGLContext::OpenGLContext(const RendererOptions& info)
     : m_SwapIntervalMode(info.SwapIntervalMode)
 {
     GLFWD_ASSERT(!s_Instance,
                  "RHI/OpenGL Context has already been initialized, cannot have 2 instances");
+    s_Instance = this;
 
     if (!SDL_Init(SDL_INIT_VIDEO))
         GLFWD_FATAL("Failed to initialize SDL: {}", SDL_GetError());

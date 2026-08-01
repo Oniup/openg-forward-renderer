@@ -19,12 +19,12 @@ set(SRC
         rhi/texture.h
         rhi/texture.cpp
 
-        create_info.h
         draw_mode.h
         forward_renderer.h
         forward_renderer.cpp
         render_queue.h
         render_queue.cpp
+        renderer_options.h
 )
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${SRC})
 
@@ -47,7 +47,8 @@ target_link_libraries(glfwd_renderer PUBLIC
 target_link_libraries(glfwd_renderer PRIVATE
         SDL3::SDL3
         SDL3_image::SDL3_image
-        glad
+        glad::glad
+        assimp::assimp
 )
 
 # Alias for external linking

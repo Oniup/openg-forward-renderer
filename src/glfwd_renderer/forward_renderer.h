@@ -1,7 +1,7 @@
 #pragma once
 
-#include "glfwd_renderer/create_info.h"
 #include "glfwd_renderer/render_queue.h"
+#include "glfwd_renderer/renderer_options.h"
 
 typedef struct SDL_GLContextState* SDL_GLContext;
 
@@ -20,7 +20,7 @@ class ForwardRenderer
     };
 
 public:
-    ForwardRenderer(const RendererCreateInfo& info);
+    ForwardRenderer(const RendererOptions& info);
     ~ForwardRenderer();
 
     ForwardRenderer(const ForwardRenderer& other)            = delete;
@@ -31,6 +31,9 @@ public:
 
     RenderQueue*       GetRenderQueue() { return &m_RenderQueue; }
     const RenderQueue* GetRenderQueue() const { return &m_RenderQueue; }
+
+    const TextureFilterOptions& GetDefaultTextureFilter() const;
+    void                        SetDefaultTextureFilter(const TextureFilterOptions& filter);
 
     void Render();
 
@@ -47,9 +50,9 @@ private:
                                 const std::vector<RenderQueue::DrawCommand>& commands,
                                 const std::vector<size_t>&                   draw_order) const;
 
-    RenderQueue        m_RenderQueue;
-    OpenGLContext*     m_Context = nullptr;
-    RendererCreateInfo m_Options;
+    RenderQueue     m_RenderQueue;
+    OpenGLContext*  m_Context = nullptr;
+    RendererOptions m_Options;
 };
 
 } // namespace glfwd

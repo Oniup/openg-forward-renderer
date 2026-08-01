@@ -9,12 +9,9 @@
 #include "glfwd_core/utility/error.h"
 #include "glfwd_renderer/rhi/texture.h"
 
-enum
-{
-    ERROR_BUFFER_LENGTH = 1024
-};
-
 namespace glfwd {
+
+static constexpr size_t ErrorBufferLength = 1024;
 
 namespace {
 
@@ -99,39 +96,22 @@ void Shader::Bind() const
     glUseProgram(m_ID);
 }
 
-bool Shader::ReloadShader(std::string_view new_vertex, std::string_view new_fragment,
-                          std::string_view new_geometry)
-{
 #ifdef GLFWD_SHADER_HOT_RELOAD
-    new_vertex   = new_vertex.empty() ? m_VertexPath : new_vertex;
-    new_fragment = new_fragment.empty() ? m_FragmentPath : new_fragment;
-    new_geometry = new_geometry.empty() ? m_GeometryPath : new_geometry;
-#endif
-
-    if (new_vertex.empty() || new_fragment.empty())
-    {
-        GLFWD_ERROR("Must provide a new vertex and fragment shader when reloading shader");
-        return false;
-    }
-
-    uint32_t program = LoadShaderFromPath(new_vertex, new_fragment, new_geometry);
+bool Shader::ReloadShader()
+{
+    uint32_t program = LoadShaderFromPath(m_VertexPath, m_FragmentPath, m_GeometryPath);
     if (program != 0)
     {
         m_ID = program;
         GLFWD_INFO("Reloaded shaders shader:\n\tVertex: {}\n\tFragment: {}\n\tGeometry: {}",
-                   new_vertex,
-                   new_fragment,
-                   new_geometry);
-
-#ifdef GLFWD_SHADER_HOT_RELOAD
-        m_VertexPath   = new_vertex;
-        m_FragmentPath = new_fragment;
-        m_GeometryPath = new_geometry;
-#endif
+                   m_VertexPath,
+                   m_FragmentPath,
+                   m_GeometryPath);
         return true;
     }
     return false;
 }
+#endif
 
 void Shader::PushConstant(std::string_view location, int32_t val) const
 {
@@ -223,8 +203,8 @@ uint32_t Shader::LoadShaderFromPath(std::string_view vertex, std::string_view fr
         glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
         if (!success)
         {
-            char buffer[ERROR_BUFFER_LENGTH];
-            glGetShaderInfoLog(shader, ERROR_BUFFER_LENGTH, nullptr, buffer);
+            char buffer[ErrorBufferLength];
+            glGetShaderInfoLog(shader, ErrorBufferLength, nullptr, buffer);
 
             glDeleteShader(shader);
             for (size_t j = 0; j < i; j++)
@@ -256,8 +236,8 @@ uint32_t Shader::LoadShaderFromPath(std::string_view vertex, std::string_view fr
     {
         glDeleteProgram(program);
 
-        char error_message[ERROR_BUFFER_LENGTH];
-        glGetProgramInfoLog(program, ERROR_BUFFER_LENGTH, nullptr, error_message);
+        char error_message[ErrorBufferLength];
+        glGetProgramInfoLog(program, ErrorBufferLength, nullptr, error_message);
 
         std::string shader_info;
         for (size_t i = 0; i < count; i++)

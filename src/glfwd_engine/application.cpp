@@ -45,6 +45,7 @@ void Application::Initialize(const ApplicationCreateInfo& create_info)
     m_Renderer = new ForwardRenderer(create_info.Renderer);
     m_Window   = new Window(create_info.Window);
     CoreContext::ProvideWindow(m_Window);
+    CoreContext::ProvideForwardRenderer(m_Renderer);
 
     // Initialize forward renderer and RHI context
     m_Renderer->InitializeBackend();
